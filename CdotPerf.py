@@ -58,7 +58,7 @@ class CdotPerf:
 	return vol_list
 
 
-    def get_counters(self, instance_uuid):
+    def get_counters(self, instance_uuid, counter_filter_list=None):
 	"""
 	    Get counters for volume instance-uuid's
 
@@ -72,6 +72,9 @@ class CdotPerf:
 	api = NaElement("perf-object-get-instances")
 	xi = NaElement("counters")
 	api.child_add(xi)
+
+	xi.child_add_string("counter",counter_filter_list)
+
 	xi2 = NaElement("instances")
 	api.child_add(xi2)
 	api.child_add_string("objectname","volume")
@@ -82,6 +85,7 @@ class CdotPerf:
 	xo = self.s.invoke_elem(api)
 	if (xo.results_status() == "failed") :
 	    ## Volumes which are currently offline will error here as no counters are collected
+	    #print xo.sprintf()
 	    return ctrs
 	try:
 	    f = xmltodict.parse(xo.sprintf())
@@ -90,7 +94,9 @@ class CdotPerf:
 	ctrs['timestamp'] = f['results']['timestamp']
 	ctrs['volname']   = f['results']['instances']['instance-data']['name']
 	ctrs['voluuid']   = f['results']['instances']['instance-data']['uuid']
+	#print f
 	for ctr in f['results']['instances']['instance-data']['counters']['counter-data']:
+	    #print ctr
 	    ctrs[ctr['name']] = ctr['value']
 	return ctrs
 
