@@ -20,6 +20,11 @@ from Daemon import Daemon
 
 class MyDaemon(Daemon):
 
+    ## TODO - Instrument this code
+    ##
+    ##  Add timing points to this code
+    ##   - Before and after API calls. 
+    ##   - Also try and record number of metrics sent to grpahite
     def run(self):
 	cdot_vol_obj = CdotPerf('brisvegas', '10.128.153.60','BNELAB\\duanes','D3m0open', "1.21")
 	## Connect to statsd
@@ -35,6 +40,12 @@ class MyDaemon(Daemon):
 		new_data = {}
 		for v in new:
 		    try:
+			##
+			## TODO - Need to fix this;
+			##
+			##  - metric_string defines where the stats go in the graphite tree
+			##  - need to standardise on how metrics are recorded
+			##
 			v_cn  = v['cluster-name']
 			v_svm = v['owning-vserver-name']
 			v_vol = v['name']
@@ -43,11 +54,13 @@ class MyDaemon(Daemon):
 			c_read_ops  = c['read_ops']
 			c_write_ops = c['write_ops']
 			c_total_ops = c['total_ops']
+			c_nfs_read_latency = c['nfs_read_latency']
 			metric_string =  "brisvegas.%s.%s.read_ops" % (v_svm, v_vol)
 			new_data[metric_string] = {}
 			new_data[metric_string]['timestamp'] = c_ts
 			new_data[metric_string]['read_ops']  = c_read_ops
 			new_data[metric_string]['write_ops'] = c_write_ops
+			new_data[metric_string]['nfs_read_latency'] = c_nfs_read_latency
 			metric_string =  "brisvegas.%s.%s.write_ops" % (v_svm, v_vol)
 			new_data[metric_string] = {}
 			new_data[metric_string]['timestamp'] = c_ts
@@ -83,7 +96,6 @@ class MyDaemon(Daemon):
 		old = new
 		new = []
 	    time.sleep(30)
-
 
 def main():
     """
