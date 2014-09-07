@@ -1,6 +1,6 @@
 #!/usr/bin/python
 ##
-## $Id: list_metrics.py,v 1.1 2014/09/07 00:19:10 duane Exp duane $
+## $Id$
 ##
 ## Todo:
 ##  - 
