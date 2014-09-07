@@ -10,18 +10,10 @@ sys.path.append("/home/duane/lib/netapp-manageability-sdk-5.2.1R1/lib/python/Net
 from NaServer import *
 import xmltodict
 import statsd
-
 from CdotPerf import CdotPerf
 
 def main():
     cdot_vol_obj = CdotPerf('brisvegas', '10.128.153.60','BNELAB\\duanes','D3m0open', "1.21")
-    #s = NaServer("10.128.153.60", 1 , 21)
-    #s.set_server_type("FILER")
-    #s.set_transport_type("HTTPS")
-    #s.set_port(443)
-    #s.set_style("LOGIN")
-    #s.set_admin_user("BNELAB\\duanes", "D3m0open")
-    #cs = statsd.StatsClient('localhost',8125)
     for v in cdot_vol_obj.get_volumes():
 	try:
 	    c = cdot_vol_obj.get_counters(v['instance-uuid'])
