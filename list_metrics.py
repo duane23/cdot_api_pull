@@ -100,10 +100,16 @@ def main():
 
     for v in get_volumes(s):
 	try:
-	    v_cn  = v['cluster-name']
-	    v_svm = v['owning-vserver-name']
-	    v_vol = v['name']
+	    print v
+	    #v_cn  = v['cluster-name']
+	    #v_svm = v['owning-vserver-name']
+	    #v_vol = v['name']
 	    c = get_counters(s, v['instance-uuid'])
+	    ctr_names = c.keys()
+	    ctr_names.sort()
+	    for ctr in ctr_names:
+		print "%s -> %s -> %s -> %s" % ("brisvegas", v['owning-vserver-name'], v['name'], ctr)
+	    sys.exit(0)
 
 	    c_ts = c['timestamp']
 	    c_read_ops  = c['read_ops']
