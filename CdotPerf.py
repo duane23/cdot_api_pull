@@ -61,7 +61,14 @@ class CdotPerf:
     def get_counters(self, instance_uuid):
 	"""
 	    Get counters for volume instance-uuid's
+
+	    A string, representing filter data, in the format of key=value pairs. Multiple pairs can be specified via comma (",")
+	    or pipe ("|") separation. The applied filter is a combination of ANDing and ORing the key-value pairs.
+	    A comma indicates ANDing, a pipe indicates ORing, and the order of precedence is AND and then OR. For example,
+	    "instance_name=volA,vserver_name=vs1|vserver_name=vs2" equates to "(instance_name=volA && vserver_name=vs1) |
+	    (vserver_name=vs2)". This would return instances on Vserver vs1 with name volA and all instances on Vserver vs2.
 	"""
+
 	api = NaElement("perf-object-get-instances")
 	xi = NaElement("counters")
 	api.child_add(xi)
@@ -86,3 +93,32 @@ class CdotPerf:
 	for ctr in f['results']['instances']['instance-data']['counters']['counter-data']:
 	    ctrs[ctr['name']] = ctr['value']
 	return ctrs
+
+    def get_object_counter_info(self,targObject):
+	api = NaElement("perf-object-counter-list-info")
+	api.child_add_string("objectname",targObject)
+	xo = self.s.invoke_elem(api)
+	if (xo.results_status() == "failed") :
+	    sys.exit (1)
+	f = xmltodict.parse(xo.sprintf())
+	lines = []
+	for c in f['results']['counters']['counter-info']:
+	    ##
+	    ## Need more code to handle case where base-counter is present and where data type is array / histogram
+	    ##
+	    lines.append("%s|%s|%s|%s" % (c["name"],c["properties"],c["unit"],c["desc"]))
+	return lines
+
+    def get_objects(self):
+	api = NaElement("perf-object-list-info")
+	#api.child_add_string("filter-data", "<filter-data>")
+	xo = self.s.invoke_elem(api)
+	if (xo.results_status() == "failed") :
+	    print ("Error:\n")
+	    print (xo.sprintf())
+	    sys.exit (1)
+	f = xmltodict.parse(xo.sprintf())
+	objects = []
+	for obj in f['results']['objects']['object-info']:
+	    objects.append(obj['name'])
+	return objects
