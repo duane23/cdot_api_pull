@@ -15,7 +15,7 @@ from CdotPerf import CdotPerf
 def main():
     cdot_vol_obj = CdotPerf('brisvegas', '10.128.153.60','BNELAB\\duanes','D3m0open', "1.21")
     counter_info = {}
-    for t in cdot_vol_obj.get_perf_objects():
+    for t in cdot_vol_obj.get_aggr_objects():
 	counter_info[t] = {}
         for line in cdot_vol_obj.get_object_counter_info(t):
 	    counter_info[t][string.split(line,'|')[0]] = line

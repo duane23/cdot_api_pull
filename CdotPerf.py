@@ -12,9 +12,6 @@ import xmltodict
 import statsd
 import time
 
-#CLUSTER_NAME = "brisvegas"
-#MAX_VOLUMES  = 20000
-
 class CdotPerf:
     def __init__(self, cluster_name, cluster_ip, username, password, sdk_ver, server_type="FILER", transport_type="HTTPS", port="443", style="LOGIN"):
         major, minor = string.split(sdk_ver, '.')
@@ -68,13 +65,10 @@ class CdotPerf:
 	    "instance_name=volA,vserver_name=vs1|vserver_name=vs2" equates to "(instance_name=volA && vserver_name=vs1) |
 	    (vserver_name=vs2)". This would return instances on Vserver vs1 with name volA and all instances on Vserver vs2.
 	"""
-
 	api = NaElement("perf-object-get-instances")
 	xi = NaElement("counters")
 	api.child_add(xi)
-
 	xi.child_add_string("counter",counter_filter_list)
-
 	xi2 = NaElement("instances")
 	api.child_add(xi2)
 	api.child_add_string("objectname","volume")
@@ -85,7 +79,6 @@ class CdotPerf:
 	xo = self.s.invoke_elem(api)
 	if (xo.results_status() == "failed") :
 	    ## Volumes which are currently offline will error here as no counters are collected
-	    #print xo.sprintf()
 	    return ctrs
 	try:
 	    f = xmltodict.parse(xo.sprintf())
@@ -94,9 +87,7 @@ class CdotPerf:
 	ctrs['timestamp'] = f['results']['timestamp']
 	ctrs['volname']   = f['results']['instances']['instance-data']['name']
 	ctrs['voluuid']   = f['results']['instances']['instance-data']['uuid']
-	#print f
 	for ctr in f['results']['instances']['instance-data']['counters']['counter-data']:
-	    #print ctr
 	    ctrs[ctr['name']] = ctr['value']
 	return ctrs
 
@@ -109,15 +100,31 @@ class CdotPerf:
 	f = xmltodict.parse(xo.sprintf())
 	lines = []
 	for c in f['results']['counters']['counter-info']:
-	    ##
 	    ## Need more code to handle case where base-counter is present and where data type is array / histogram
 	    ##
-	    lines.append("%s|%s|%s|%s" % (c["name"],c["properties"],c["unit"],c["desc"]))
+	    ## Mandatory fields returned: name, desc, privilege-level
+	    ## Optional fields returned:  aggregation-style, base-counter, is-key, labels, properties, translation-input-counter, type, unit
+	    poss_fields = ["name","desc","privilege-level","aggregation-style","base-counter","is-key","labels","properties","translation-input-counter","type","unit"]
+	    fields = []
+	    for pf in poss_fields:
+		if (pf in c.keys()):
+		    if (pf == "labels"):
+			try:
+			    fields.append(c[pf]['label-info'].encode('ascii','ignore'))
+			except AttributeError:
+			    fields.append(c[pf]['label-info'][0].encode('ascii','ignore'))
+		    else:
+			try:
+			    fields.append(c[pf].encode('ascii','ignore'))
+			except AttributeError:
+			    print "In AttributeError in get_object_counter_info"
+		else:
+		    fields.append("")
+	    lines.append(string.join(fields, "|"))
 	return lines
 
-    def get_objects(self):
+    def get_perf_objects(self):
 	api = NaElement("perf-object-list-info")
-	#api.child_add_string("filter-data", "<filter-data>")
 	xo = self.s.invoke_elem(api)
 	if (xo.results_status() == "failed") :
 	    print ("Error:\n")
