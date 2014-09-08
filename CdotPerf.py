@@ -24,6 +24,55 @@ class CdotPerf:
         self.s.set_style(style)
         self.s.set_admin_user(username, password)
 
+    def get_aggregates(self):
+	"""
+	    Get list of volumes from cluster
+	"""
+	api = NaElement("aggr-get-iter")
+	#xi = NaElement("desired-attributes")
+	#api.child_add(xi)
+	## This specifies max number of volume records to pull from sdk api
+	## Default is 20. 20000 is enough for most clusters
+	api.child_add_string("max-records",self.MAX_VOLUMES)
+	#xi1 = NaElement("aggr-attributes")
+	#xi.child_add(xi1)
+	#xi41 = NaElement("volume-id-attributes")
+	#xi41.child_add_string("instance-uuid","<instance-uuid>")
+	#xi41.child_add_string("name","<name>")
+	#xi41.child_add_string("owning-vserver-name","<owning-vserver-name>")
+	#xi41.child_add_string("uuid","<uuid>")
+	#xi1.child_add(xi41)
+	xo = self.s.invoke_elem(api)
+	#print xo.sprintf()
+	f = xmltodict.parse(xo.sprintf())
+	#print xo.sprintf()
+	aggrs = f['results']['attributes-list']['aggr-attributes']
+	aggr_list = []
+	for aggr in aggrs:
+	    for z in aggr.keys():
+		try:
+		    if (z == 'aggregate-name'):
+			aggr_name = aggr[z]
+			#print "aggr_name: %s" % aggr_name
+		    elif (z == 'aggregate-uuid'):
+			aggr_uuid = aggr[z]
+			#print "aggr_uuid: %s" % aggr_uuid
+		    elif (z == 'aggr-ownership-attributes'):
+			aggr_ownr = aggr[z]['owner-name']
+			#print "aggr_ownr: %s" % aggr_ownr
+		    #print "z: %s" % z
+		    #print "kggr[z].keys: %s" % aggr[z].keys()
+		except AttributeError:
+		    #print "In Exception - aggr[z]: %s" % aggr[z]
+		    pass
+	    aggr_list.append({
+			      'cluster-name':self.CLUSTER_NAME,
+			      'aggr-name':aggr_name,
+			      'aggr-uuid':aggr_uuid,
+			      'owner-name':aggr_ownr
+			     })
+	return aggr_list
+
     def get_volumes(self):
 	"""
 	    Get list of volumes from cluster
@@ -56,21 +105,15 @@ class CdotPerf:
 
 
     def get_counters(self, instance_uuid, counter_filter_list=None):
-	"""
-	    Get counters for volume instance-uuid's
-
-	    A string, representing filter data, in the format of key=value pairs. Multiple pairs can be specified via comma (",")
-	    or pipe ("|") separation. The applied filter is a combination of ANDing and ORing the key-value pairs.
-	    A comma indicates ANDing, a pipe indicates ORing, and the order of precedence is AND and then OR. For example,
-	    "instance_name=volA,vserver_name=vs1|vserver_name=vs2" equates to "(instance_name=volA && vserver_name=vs1) |
-	    (vserver_name=vs2)". This would return instances on Vserver vs1 with name volA and all instances on Vserver vs2.
-	"""
 	api = NaElement("perf-object-get-instances")
 	xi = NaElement("counters")
 	api.child_add(xi)
 	xi.child_add_string("counter",counter_filter_list)
 	xi2 = NaElement("instances")
 	api.child_add(xi2)
+	##
+	## TODO - make this generic to get counters for non-volume uuids
+	##
 	api.child_add_string("objectname","volume")
 	xi1 = NaElement("instance-uuids")
 	api.child_add(xi1)
