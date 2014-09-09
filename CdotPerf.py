@@ -142,8 +142,8 @@ class CdotPerf:
     def get_counters_by_uuid(self, instance_uuid, object_name, counter_filter_list=None):
 	api = NaElement("perf-object-get-instances")
 	#xi = NaElement("counters")
-	#api.child_add(xi)
-	#xi.child_add_string("counter",counter_filter_list)
+	api.child_add(xi)
+	xi.child_add_string("counter",counter_filter_list)
 	#xi2 = NaElement("instances")
 	#api.child_add(xi2)
 	#xi2.child_add_string("instance",instance)
