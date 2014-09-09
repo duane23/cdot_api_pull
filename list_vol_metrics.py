@@ -15,17 +15,19 @@ from CdotPerf import CdotPerf
 def main():
     cdot_vol_obj = CdotPerf('brisvegas', '10.128.153.60','BNELAB\\duanes','D3m0open', "1.21")
     counter_info = {}
-    for t in cdot_vol_obj.get_perf_objects():
+    #objlist = cdot_api_obj.get_perf_objects()
+    objlist = ['volume']
+    for t in objlist:
 	counter_info[t] = {}
         for line in cdot_vol_obj.get_object_counter_info(t):
 	    counter_info[t][string.split(line,'|')[0]] = line
     for v in cdot_vol_obj.get_volumes():
 	try:
-	    c = cdot_vol_obj.get_counters(v['instance-uuid'])
+	    c = cdot_vol_obj.get_counters_by_uuid(v['instance-uuid'], 'volume')
 	    ctr_names = c.keys()
 	    ctr_names.sort()
-	    if (ctr != "timestamp"):
-		for ctr in ctr_names:
+	    for ctr in ctr_names:
+		if (ctr != "timestamp"):
 		    print "%s|%s|%s|%s" % ("brisvegas", v['owning-vserver-name'], v['name'], counter_info['volume'][ctr])
 	except KeyError:
 	    print "Hit keyerror - ctr = %s" % ctr

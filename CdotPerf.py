@@ -104,24 +104,64 @@ class CdotPerf:
 	return vol_list
 
 
-    def get_counters(self, instance_uuid, counter_filter_list=None):
+    def get_counters_by_name(self, instance_name, object_name, counter_filter_list=None):
 	api = NaElement("perf-object-get-instances")
-	xi = NaElement("counters")
-	api.child_add(xi)
-	xi.child_add_string("counter",counter_filter_list)
+	#xi = NaElement("counters")
+	#api.child_add(xi)
+	#xi.child_add_string("counter",counter_filter_list)
 	xi2 = NaElement("instances")
 	api.child_add(xi2)
+	xi2.child_add_string("instance",instance_name)
+	#xi3 = NaElement("instance-uuids")
+	#api.child_add(xi3)
+	#xi3.child_add_string("instance-uuid",instance_uuid)
 	##
 	## TODO - make this generic to get counters for non-volume uuids
 	##
-	api.child_add_string("objectname","volume")
-	xi1 = NaElement("instance-uuids")
-	api.child_add(xi1)
-	xi1.child_add_string("instance-uuid",instance_uuid)
+	api.child_add_string("objectname",object_name)
+	#xi1 = NaElement("instance-uuids")
+	#api.child_add(xi1)
+	#xi1.child_add_string("instance-uuid",instance_uuid)
 	ctrs = {}
 	xo = self.s.invoke_elem(api)
 	if (xo.results_status() == "failed") :
 	    ## Volumes which are currently offline will error here as no counters are collected
+	    print xo.sprintf()
+	    return ctrs
+	try:
+	    f = xmltodict.parse(xo.sprintf())
+	except xml.parsers.expat.ExpatError:
+	    print xo.sprintf()
+	ctrs['timestamp'] = f['results']['timestamp']
+	ctrs['volname']   = f['results']['instances']['instance-data']['name']
+	ctrs['voluuid']   = f['results']['instances']['instance-data']['uuid']
+	for ctr in f['results']['instances']['instance-data']['counters']['counter-data']:
+	    ctrs[ctr['name']] = ctr['value']
+	return ctrs
+
+    def get_counters_by_uuid(self, instance_uuid, object_name, counter_filter_list=None):
+	api = NaElement("perf-object-get-instances")
+	#xi = NaElement("counters")
+	#api.child_add(xi)
+	#xi.child_add_string("counter",counter_filter_list)
+	#xi2 = NaElement("instances")
+	#api.child_add(xi2)
+	#xi2.child_add_string("instance",instance)
+	xi3 = NaElement("instance-uuids")
+	api.child_add(xi3)
+	xi3.child_add_string("instance-uuid",instance_uuid)
+	##
+	## TODO - make this generic to get counters for non-volume uuids
+	##
+	api.child_add_string("objectname",object_name)
+	#xi1 = NaElement("instance-uuids")
+	#api.child_add(xi1)
+	#xi1.child_add_string("instance-uuid",instance_uuid)
+	ctrs = {}
+	xo = self.s.invoke_elem(api)
+	if (xo.results_status() == "failed") :
+	    ## Volumes which are currently offline will error here as no counters are collected
+	    print xo.sprintf()
 	    return ctrs
 	try:
 	    f = xmltodict.parse(xo.sprintf())

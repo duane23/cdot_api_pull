@@ -49,7 +49,7 @@ class MyDaemon(Daemon):
 			v_cn  = v['cluster-name']
 			v_svm = v['owning-vserver-name']
 			v_vol = v['name']
-			c = cdot_vol_obj.get_counters(v['instance-uuid'])
+			c = cdot_vol_obj.get_counters(v['instance-uuid'], "volume", "read_ops,write_ops,total_ops,nfs_write_latency,nfs_read_latency,nfs_other_latency")
 			c_ts = c['timestamp']
 			c_read_ops  = c['read_ops']
 			c_write_ops = c['write_ops']
