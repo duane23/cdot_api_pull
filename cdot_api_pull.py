@@ -11,6 +11,7 @@ import logging
 import signal
 
 sys.path.append("/home/duane/lib/netapp-manageability-sdk-5.2.1R1/lib/python/NetApp")
+sys.path.append("/home/duane/cdot_api_pull")
 from NaServer import *
 import xmltodict
 import statsd
@@ -49,7 +50,7 @@ class MyDaemon(Daemon):
 			v_cn  = v['cluster-name']
 			v_svm = v['owning-vserver-name']
 			v_vol = v['name']
-			c = self.cdot_api_obj.get_counters_by_uuid(v['instance-uuid'], "volume", "read_ops,write_ops,total_ops,nfs_write_latency,nfs_read_latency,nfs_other_latency")
+			c = self.cdot_api_obj.get_counters_by_uuid(v['instance-uuid'], "volume", "read_ops,write_ops,total_ops,nfs_write_latency,nfs_read_latency,nfs_other_latency,avg_latency")
 			c_ts = c['timestamp']
 			for res in c.keys():
 			    if ((res != 'timestamp') and (res != 'voluuid')):
@@ -64,10 +65,27 @@ class MyDaemon(Daemon):
 		    for metric in new_data.keys():
 			if ((metric == 'timestamps') or (string.split(metric, '.')[-1] == 'volname')):
 			    pass
+			elif (string.split(metric, '.')[-1] == 'avg_latency'):
+			    metric_delta = long((new_data[metric])) - long((old_data[metric]))
+			    #print "metric_delta = %s - %s = %s" % (long(new_data[metric]), long(old_data[metric]), metric_delta)
+			    base_counter_lst = string.split(metric, '.')[:-1]
+			    base_counter_lst.append('total_ops')
+			    base_counter = string.join(base_counter_lst, '.')
+			    metric_base_delta = long((new_data[base_counter])) - long((old_data[base_counter]))
+			    #print "metric_base_delta = %s - %s = %s" % (long(new_data[base_counter]), long(old_data[base_counter]), metric_base_delta)
+			    try:
+				metric_rate = metric_delta / metric_base_delta
+			    except ZeroDivisionError:
+				#print "hit div by 0"
+				metric_rate = 0
+			    #print "metric_rate = %s / %s" % (metric_delta, metric_base_delta)
+			    #print ">>>%s -> %s" % (metric, metric_rate)
+			    cs.gauge(metric, metric_rate)
 			else:
 			    ## For each metric in new_data & old_data;
 			    ##  - Calculate elapsed time
 			    ##  - Work out diff between values, divide by secs
+
 			    old_ts = long((old_data['timestamps'][metric]).encode('ascii','ignore'))
 			    new_ts = long((new_data['timestamps'][metric]).encode('ascii','ignore'))
 			    #print "Doing comparison for %s" % metric
