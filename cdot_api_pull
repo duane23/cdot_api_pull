@@ -25,8 +25,27 @@ class MyDaemon(Daemon):
     ##  Add timing points to this code
     ##   - Before and after API calls. 
     ##   - Also try and record number of metrics sent to grpahite
+
+    def get_vol_counters(self, vol_inst_uuid, counter_list):
+	## Takes volume instance-uuid & list of counters to return.
+	## List of counters is string containing counter-names separated by commas
+	## Returns dict as follows:
+	## 
+	## { timestamp : <timestamp>
+	##   counters  : { counter-name : <counter-value>,
+	##                 counter-name : <counter-value>
+	##             }
+	## }
+
+	c = self.cdot_api_obj.get_counters_by_uuid(vol_inst_uuid, "volume", counter_list)
+	r = {}
+	r['timestamp'] = c['timestamp']
+	c['counters']  = {}
+
+	## TODO
+
     def run(self):
-	cdot_vol_obj = CdotPerf('brisvegas', '10.128.153.60','BNELAB\\duanes','D3m0open', "1.21")
+	self.cdot_api_obj = CdotPerf('brisvegas', '10.128.153.60','BNELAB\\duanes','D3m0open', "1.21")
 	## Connect to statsd
 	cs = statsd.StatsClient('localhost',8125)
 	old = []
@@ -34,7 +53,7 @@ class MyDaemon(Daemon):
 	new_data = {}
 	old_data = {}
 	while True:
-	    new = cdot_vol_obj.get_volumes()
+	    new = self.cdot_api_obj.get_volumes()
 	    if (len(old) != 0):
 		old_data = new_data
 		new_data = {}
@@ -49,12 +68,14 @@ class MyDaemon(Daemon):
 			v_cn  = v['cluster-name']
 			v_svm = v['owning-vserver-name']
 			v_vol = v['name']
-			c = cdot_vol_obj.get_counters(v['instance-uuid'], "volume", "read_ops,write_ops,total_ops,nfs_write_latency,nfs_read_latency,nfs_other_latency")
+			c = self.cdot_api_obj.get_counters_by_uuid(v['instance-uuid'], "volume", "read_ops,write_ops,total_ops,nfs_write_latency,nfs_read_latency,nfs_other_latency")
 			c_ts = c['timestamp']
 			c_read_ops  = c['read_ops']
 			c_write_ops = c['write_ops']
 			c_total_ops = c['total_ops']
 			c_nfs_read_latency = c['nfs_read_latency']
+			c_nfs_write_latency = c['nfs_write_latency']
+			c_nfs_other_latency = c['nfs_other_latency']
 			metric_string =  "brisvegas.%s.%s.read_ops" % (v_svm, v_vol)
 			new_data[metric_string] = {}
 			new_data[metric_string]['timestamp'] = c_ts
