@@ -62,6 +62,9 @@ class MyDaemon(Daemon):
 			self.cdot_api_obj.tellme("caught error for vol %s" % v_vol)
 			continue
 		## Compare old and new here
+		## TODO
+		##  - This needs to be extended to automatically handle average counters, base counters and percent counters.
+		##  - targ_counters should be a dict which contains metric, metric-type and base-counter as required
 		if (old_data['timestamps'] != {}):
 		    for metric in new_data.keys():
 			if ((metric == 'timestamps') or (string.split(metric, '.')[-1] == 'volname')):
@@ -91,7 +94,17 @@ class MyDaemon(Daemon):
 			    ## For each metric in new_data & old_data;
 			    ##  - Calculate elapsed time
 			    ##  - Work out diff between values, divide by secs
-
+			    ##TODO:
+			    """
+			    Traceback (most recent call last):
+			      File "./test_cdot_api_pull.py", line 23, in <module>
+				main()
+			      File "./test_cdot_api_pull.py", line 19, in main
+				test.run()
+			      File "/home/duane/cdot_api_pull/cdot_api_pull.py", line 95, in run
+				##  - Calculate elapsed time
+			    KeyError: u'brisvegas.vs1.userdata_ls1.write_data'
+			    """
 			    old_ts = long((old_data['timestamps'][metric]).encode('ascii','ignore'))
 			    new_ts = long((new_data['timestamps'][metric]).encode('ascii','ignore'))
 			    self.cdot_api_obj.tellme("Doing comparison for %s" % metric)
