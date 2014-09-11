@@ -23,6 +23,18 @@ class CdotPerf:
         self.s.set_port(port)
         self.s.set_style(style)
         self.s.set_admin_user(username, password)
+	self.fp = open("/var/tmp/tellme.log", "a")
+	try:
+	    self.debug = open("/var/tmp/debugenabled")
+	    self.debug.close()
+	    self.debug = True
+	except IOError:
+	    self.debug = False
+	    pass
+
+    def tellme(self, message):
+	if (self.debug):
+	    self.fp.write("%s\n" % message)
 
     def get_aggregates(self):
 	"""

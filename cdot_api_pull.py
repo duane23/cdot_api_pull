@@ -50,7 +50,8 @@ class MyDaemon(Daemon):
 			v_cn  = v['cluster-name']
 			v_svm = v['owning-vserver-name']
 			v_vol = v['name']
-			c = self.cdot_api_obj.get_counters_by_uuid(v['instance-uuid'], "volume", "read_ops,write_ops,total_ops,nfs_write_latency,nfs_read_latency,nfs_other_latency,avg_latency")
+			targ_counters = "avg_latency,cifs_other_latency,cifs_other_ops,cifs_read_data,cifs_read_latency,cifs_read_ops,cifs_write_data,cifs_write_latency,cifs_write_ops,fcp_other_latency,fcp_other_ops,fcp_read_data,fcp_read_latency,fcp_read_ops,fcp_write_data,fcp_write_latency,fcp_write_ops,flexcache_other_ops,flexcache_read_data,flexcache_read_ops,flexcache_receive_data,flexcache_send_data,flexcache_write_data,flexcache_write_ops,iscsi_other_latency,iscsi_other_ops,iscsi_read_data,iscsi_read_latency,iscsi_read_ops,iscsi_write_data,iscsi_write_latency,iscsi_write_ops,nfs_other_latency,nfs_other_ops,nfs_read_data,nfs_read_latency,nfs_read_ops,nfs_write_data,nfs_write_latency,nfs_write_ops,other_latency,other_ops,read_blocks,read_data,read_latency,read_ops,san_other_latency,san_other_ops,san_read_data,san_read_latency,san_read_ops,san_write_data,san_write_latency,san_write_ops,total_ops,write_blocks,write_data,write_latency,write_ops"
+			c = self.cdot_api_obj.get_counters_by_uuid(v['instance-uuid'], "volume", targ_counters)
 			c_ts = c['timestamp']
 			for res in c.keys():
 			    if ((res != 'timestamp') and (res != 'voluuid')):
@@ -58,7 +59,7 @@ class MyDaemon(Daemon):
 				new_data[metric_string] = c[res]
 				new_data['timestamps'][metric_string] = c_ts
 		    except KeyError:
-			print "caught error for vol %s" % v_vol
+			self.cdot_api_obj.tellme("caught error for vol %s" % v_vol)
 			continue
 		## Compare old and new here
 		if (old_data['timestamps'] != {}):
@@ -67,20 +68,25 @@ class MyDaemon(Daemon):
 			    pass
 			elif (string.split(metric, '.')[-1] == 'avg_latency'):
 			    metric_delta = long((new_data[metric])) - long((old_data[metric]))
-			    #print "metric_delta = %s - %s = %s" % (long(new_data[metric]), long(old_data[metric]), metric_delta)
+			    self.cdot_api_obj.tellme("metric_delta = %s - %s = %s" % (long(new_data[metric]), long(old_data[metric]), metric_delta))
 			    base_counter_lst = string.split(metric, '.')[:-1]
 			    base_counter_lst.append('total_ops')
 			    base_counter = string.join(base_counter_lst, '.')
-			    metric_base_delta = long((new_data[base_counter])) - long((old_data[base_counter]))
-			    #print "metric_base_delta = %s - %s = %s" % (long(new_data[base_counter]), long(old_data[base_counter]), metric_base_delta)
+			    try:
+				metric_base_delta = long((new_data[base_counter])) - long((old_data[base_counter]))
+				self.cdot_api_obj.tellme("metric_base_delta = %s - %s = %s" % (long(new_data[base_counter]), long(old_data[base_counter]), metric_base_delta))
+			    except KeyError:
+				metric_base_delta = 0
+				self.cdot_api_obj.tellme("Hit KeyError - setting metric_base_delta = 0")
 			    try:
 				metric_rate = metric_delta / metric_base_delta
 			    except ZeroDivisionError:
-				#print "hit div by 0"
+				self.cdot_api_obj.tellme("hit div by 0")
 				metric_rate = 0
-			    #print "metric_rate = %s / %s" % (metric_delta, metric_base_delta)
-			    #print ">>>%s -> %s" % (metric, metric_rate)
+			    self.cdot_api_obj.tellme("metric_rate = %s / %s" % (metric_delta, metric_base_delta))
+			    self.cdot_api_obj.tellme(">>>%s -> %s" % (metric, metric_rate))
 			    cs.gauge(metric, metric_rate)
+			    self.cdot_api_obj.tellme("Submitted Gauge for %s, %s" % (metric, metric_rate))
 			else:
 			    ## For each metric in new_data & old_data;
 			    ##  - Calculate elapsed time
@@ -88,17 +94,18 @@ class MyDaemon(Daemon):
 
 			    old_ts = long((old_data['timestamps'][metric]).encode('ascii','ignore'))
 			    new_ts = long((new_data['timestamps'][metric]).encode('ascii','ignore'))
-			    #print "Doing comparison for %s" % metric
-			    #print "old_ts:: %s" % old_ts
-			    #print "new_ts:: %s" % new_ts
-			    #print "old: %s -> value: %s" % (metric, old_data[metric])
-			    #print "new: %s -> value: %s" % (metric, new_data[metric])
+			    self.cdot_api_obj.tellme("Doing comparison for %s" % metric)
+			    #self.cdot_api_obj.tellme("old_ts:: %s" % old_ts)
+			    #self.cdot_api_obj.tellme("new_ts:: %s" % new_ts)
+			    #self.cdot_api_obj.tellme("old: %s -> value: %s" % (metric, old_data[metric]))
+			    #self.cdot_api_obj.tellme("new: %s -> value: %s" % (metric, new_data[metric]))
 			    ts_delta = new_ts - old_ts
 			    metric_delta = long((new_data[metric])) - long((old_data[metric]))
 			    metric_rate = metric_delta / ts_delta
-			    #print  "ts_delta: %s, metric_delta %s" % (ts_delta, metric_delta)
-			    #print  "metric_rate: %s" % metric_rate
+			    #self.cdot_api_obj.tellme("ts_delta: %s, metric_delta %s" % (ts_delta, metric_delta))
+			    #self.cdot_api_obj.tellme("metric_rate: %s" % metric_rate)
 			    cs.gauge(metric, metric_rate)
+			    self.cdot_api_obj.tellme("Submitted Gauge for %s, %s" % (metric, metric_rate))
 		## New stats set to old, old ones nuked
 		old = new
 		new = []
