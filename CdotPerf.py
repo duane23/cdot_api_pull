@@ -32,6 +32,9 @@ class CdotPerf:
 	except IOError:
 	    self.debug = False
 	    pass
+	self.targ_vol_counters = "avg_latency,cifs_other_latency,cifs_other_ops,cifs_read_data,cifs_read_latency,cifs_read_ops,cifs_write_data,cifs_write_latency,cifs_write_ops,fcp_other_latency,fcp_other_ops,fcp_read_data,fcp_read_latency,fcp_read_ops,fcp_write_data,fcp_write_latency,fcp_write_ops,flexcache_other_ops,flexcache_read_data,flexcache_read_ops,flexcache_receive_data,flexcache_send_data,flexcache_write_data,flexcache_write_ops,iscsi_other_latency,iscsi_other_ops,iscsi_read_data,iscsi_read_latency,iscsi_read_ops,iscsi_write_data,iscsi_write_latency,iscsi_write_ops,nfs_other_latency,nfs_other_ops,nfs_read_data,nfs_read_latency,nfs_read_ops,nfs_write_data,nfs_write_latency,nfs_write_ops,other_latency,other_ops,read_blocks,read_data,read_latency,read_ops,san_other_latency,san_other_ops,san_read_data,san_read_latency,san_read_ops,san_write_data,san_write_latency,san_write_ops,total_ops,write_blocks,write_data,write_latency,write_ops"
+
+
 
     def tellme(self, message):
 	if (self.debug):
@@ -232,7 +235,7 @@ class CdotPerf:
 	    objects.append(obj['name'])
 	return objects
 
-    def load_vol_counters(self, targ_file):
+    def load_vol_counters(self, targ_file="/home/duane/cdot_api_pull/vol-perf-counters.txt"):
 	self.vol_ctr_info = {}
 	lines = open(targ_file).read()
 	for line in string.split(lines, '\n'):

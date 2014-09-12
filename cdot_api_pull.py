@@ -50,7 +50,7 @@ class MyDaemon(Daemon):
 			v_cn  = v['cluster-name']
 			v_svm = v['owning-vserver-name']
 			v_vol = v['name']
-			targ_counters = "avg_latency,cifs_other_latency,cifs_other_ops,cifs_read_data,cifs_read_latency,cifs_read_ops,cifs_write_data,cifs_write_latency,cifs_write_ops,fcp_other_latency,fcp_other_ops,fcp_read_data,fcp_read_latency,fcp_read_ops,fcp_write_data,fcp_write_latency,fcp_write_ops,flexcache_other_ops,flexcache_read_data,flexcache_read_ops,flexcache_receive_data,flexcache_send_data,flexcache_write_data,flexcache_write_ops,iscsi_other_latency,iscsi_other_ops,iscsi_read_data,iscsi_read_latency,iscsi_read_ops,iscsi_write_data,iscsi_write_latency,iscsi_write_ops,nfs_other_latency,nfs_other_ops,nfs_read_data,nfs_read_latency,nfs_read_ops,nfs_write_data,nfs_write_latency,nfs_write_ops,other_latency,other_ops,read_blocks,read_data,read_latency,read_ops,san_other_latency,san_other_ops,san_read_data,san_read_latency,san_read_ops,san_write_data,san_write_latency,san_write_ops,total_ops,write_blocks,write_data,write_latency,write_ops"
+			targ_counters = self.cdot_api_obj.targ_vol_counters
 			c = self.cdot_api_obj.get_counters_by_uuid(v['instance-uuid'], "volume", targ_counters)
 			c_ts = c['timestamp']
 			for res in c.keys():
@@ -65,6 +65,18 @@ class MyDaemon(Daemon):
 		## TODO
 		##  - This needs to be extended to automatically handle average counters, base counters and percent counters.
 		##  - targ_counters should be a dict which contains metric, metric-type and base-counter as required
+		## 
+		##  Take old and new dicts.
+		##   - for each metric in new
+		##       - if its of type average or percentage
+		##            - make sure values for new and old are present
+		##            - make sure base-counter values for new and old are present
+		## 
+		## 
+		## 
+		## 
+		## 
+		print self.cdot_api_obj.load_vol_counters()
 		if (old_data['timestamps'] != {}):
 		    for metric in new_data.keys():
 			try:
@@ -96,16 +108,6 @@ class MyDaemon(Daemon):
 				##  - Calculate elapsed time
 				##  - Work out diff between values, divide by secs
 				##TODO:
-				"""
-				Traceback (most recent call last):
-				  File "./test_cdot_api_pull.py", line 23, in <module>
-				    main()
-				  File "./test_cdot_api_pull.py", line 19, in main
-				    test.run()
-				  File "/home/duane/cdot_api_pull/cdot_api_pull.py", line 108, in run
-				    ##  - Calculate elapsed time
-				KeyError: u'brisvegas.vs1.userdata_ls1.write_data'
-				"""
 				old_ts = long((old_data['timestamps'][metric]).encode('ascii','ignore'))
 				new_ts = long((new_data['timestamps'][metric]).encode('ascii','ignore'))
 				self.cdot_api_obj.tellme("Doing comparison for %s" % metric)
@@ -121,7 +123,7 @@ class MyDaemon(Daemon):
 				cs.gauge(metric, metric_rate)
 				self.cdot_api_obj.tellme("Submitted Gauge for %s, %s" % (metric, metric_rate))
 			except KeyError:
-			    self.cdot_api_obj.tellme("cdot_api_pull.py:run(): Caught Exception for metric %s" % metric)
+			    self.cdot_api_obj.tellme("cdot_api_pull.py:run(): Caught Exception processing metric %s" % metric)
 		## New stats set to old, old ones nuked
 		old = new
 		new = []
