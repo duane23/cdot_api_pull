@@ -121,7 +121,6 @@ class MyDaemon(Daemon):
 			    elif (m_properties == 'delta'):
 				## Deltas are generally used for arrays - we don't handle these at this point.
 				pass
-				#cs.gauge(metric, metric_stored)
 			    elif (m_properties == 'rate'):
 				## Rate is the most common case - different between two values, divided by time elapsed.
 				# Calc elapsed time between new and old
@@ -144,7 +143,7 @@ class MyDaemon(Daemon):
 		## Should only be executed on first run
 		old = new
 		new = []
-	    time.sleep(1)
+	    time.sleep(30)
 
 def main():
     """
