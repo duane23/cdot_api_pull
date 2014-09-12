@@ -61,20 +61,6 @@ class MyDaemon(Daemon):
 		    except KeyError:
 			self.cdot_api_obj.tellme("caught error for vol %s" % v_vol)
 			continue
-		## Compare old and new here
-		## TODO
-		##  - This needs to be extended to automatically handle average counters, base counters and percent counters.
-		##  - targ_counters should be a dict which contains metric, metric-type and base-counter as required
-		## 
-		##  Take old and new dicts.
-		##   - for each metric in new
-		##       - if its of type average or percentage
-		##            - make sure values for new and old are present
-		##            - make sure base-counter values for new and old are present
-		## 
-		## 
-		## 
-		## 
 		## This loads the vol counter info into cdot_api_obj.vol_ctr_info
 		self.cdot_api_obj.load_vol_counters()
 		if (old_data['timestamps'] != {}):
@@ -146,13 +132,6 @@ class MyDaemon(Daemon):
 				metric_delta = long((new_data[metric])) - long((old_data[metric]))
 				# Divide change by elapapsed time (secs)
 				metric_rate = metric_delta / ts_delta
-				#self.cdot_api_obj.tellme("Doing comparison for %s" % metric)
-				#self.cdot_api_obj.tellme("old_ts:: %s" % old_ts)
-				#self.cdot_api_obj.tellme("new_ts:: %s" % new_ts)
-				#self.cdot_api_obj.tellme("old: %s -> value: %s" % (metric, old_data[metric]))
-				#self.cdot_api_obj.tellme("new: %s -> value: %s" % (metric, new_data[metric]))
-				#self.cdot_api_obj.tellme("ts_delta: %s, metric_delta %s" % (ts_delta, metric_delta))
-				#self.cdot_api_obj.tellme("metric_rate: %s" % metric_rate)
 				# Log resulting value
 				cs.gauge(metric, metric_rate)
 				self.cdot_api_obj.tellme("Submitted Gauge for %s, %s, m_properties = %s" % (metric, metric_rate, m_properties))

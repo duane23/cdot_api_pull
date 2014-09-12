@@ -15,8 +15,8 @@ from CdotPerf import CdotPerf
 def main():
     cdot_api_obj = CdotPerf('brisvegas', '10.128.153.60','BNELAB\\duanes','D3m0open', "1.21")
     counter_info = {}
-    #objlist = cdot_api_obj.get_perf_objects()
-    objlist = ['volume']
+    objlist = cdot_api_obj.get_perf_objects()
+    #objlist = ['volume']
     for t in objlist:
 	counter_info[t] = {}
         for line in cdot_api_obj.get_object_counter_info(t):

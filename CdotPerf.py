@@ -24,6 +24,7 @@ class CdotPerf:
         self.s.set_port(port)
         self.s.set_style(style)
         self.s.set_admin_user(username, password)
+	self.sd = statsd.StatsClient('localhost',8125)
 	self.fp = open("/var/tmp/tellme.log", "a")
 	try:
 	    self.debug = open("/var/tmp/debugenabled")
@@ -59,6 +60,7 @@ class CdotPerf:
 	#xi41.child_add_string("uuid","<uuid>")
 	#xi1.child_add(xi41)
 	xo = self.s.invoke_elem(api)
+	self.sd.incr("api.invoke")
 	#print xo.sprintf()
 	f = xmltodict.parse(xo.sprintf())
 	#print xo.sprintf()
@@ -108,6 +110,7 @@ class CdotPerf:
 	xi41.child_add_string("uuid","<uuid>")
 	xi1.child_add(xi41)
 	xo = self.s.invoke_elem(api)
+	self.sd.incr("api.invoke")
 	f = xmltodict.parse(xo.sprintf())
 	volumes = f['results']['attributes-list']['volume-attributes']
 	vol_list = []
@@ -140,6 +143,7 @@ class CdotPerf:
 	#xi1.child_add_string("instance-uuid",instance_uuid)
 	ctrs = {}
 	xo = self.s.invoke_elem(api)
+	self.sd.incr("api.invoke")
 	if (xo.results_status() == "failed") :
 	    ## Volumes which are currently offline will error here as no counters are collected
 	    print xo.sprintf()
@@ -175,6 +179,7 @@ class CdotPerf:
 	#xi1.child_add_string("instance-uuid",instance_uuid)
 	ctrs = {}
 	xo = self.s.invoke_elem(api)
+	self.sd.incr("api.invoke")
 	if (xo.results_status() == "failed") :
 	    ## Volumes which are currently offline will error here as no counters are collected
 	    print xo.sprintf()
@@ -194,6 +199,7 @@ class CdotPerf:
 	api = NaElement("perf-object-counter-list-info")
 	api.child_add_string("objectname",targObject)
 	xo = self.s.invoke_elem(api)
+	self.sd.incr("api.invoke")
 	if (xo.results_status() == "failed") :
 	    sys.exit (1)
 	f = xmltodict.parse(xo.sprintf())
@@ -225,6 +231,7 @@ class CdotPerf:
     def get_perf_objects(self):
 	api = NaElement("perf-object-list-info")
 	xo = self.s.invoke_elem(api)
+	self.sd.incr("api.invoke")
 	if (xo.results_status() == "failed") :
 	    print ("Error:\n")
 	    print (xo.sprintf())
