@@ -11,6 +11,7 @@ from NaServer import *
 import xmltodict
 import statsd
 import time
+import os
 
 class CdotPerf:
     def __init__(self, cluster_name, cluster_ip, username, password, sdk_ver, server_type="FILER", transport_type="HTTPS", port="443", style="LOGIN"):
@@ -230,3 +231,41 @@ class CdotPerf:
 	for obj in f['results']['objects']['object-info']:
 	    objects.append(obj['name'])
 	return objects
+
+    def load_vol_counters(self, targ_file):
+	self.vol_ctr_info = {}
+	lines = open(targ_file).read()
+	for line in string.split(lines, '\n'):
+	    try:
+		fields    = string.split(line, '|')
+		f_cluster = fields[0]
+		f_svm     = fields[1]
+		f_vol     = fields[2]
+		f_ctr     = fields[3]
+		f_desc    = fields[4]
+		f_priv    = fields[5]
+		f_junk    = fields[6]
+		f_basec   = fields[7]    # use
+		f_iskey   = fields[8]
+		f_labels  = fields[9]
+		f_props   = fields[10]   # use
+		f_junk    = fields[11]
+		f_type    = fields[12]   # use
+		f_unit    = fields[13]   # use
+		#
+		if f_cluster not in self.vol_ctr_info:
+		    self.vol_ctr_info[f_cluster] = {}
+		if f_svm not in self.vol_ctr_info[f_cluster]:
+		    self.vol_ctr_info[f_cluster][f_svm] = {}
+		if f_vol not in self.vol_ctr_info[f_cluster][f_svm]:
+		    self.vol_ctr_info[f_cluster][f_svm][f_vol] = {}
+		if f_ctr not in self.vol_ctr_info[f_cluster][f_svm][f_vol]:
+		    self.vol_ctr_info[f_cluster][f_svm][f_vol][f_ctr] = {}
+		#
+		self.vol_ctr_info[f_cluster][f_svm][f_vol][f_ctr]['base-counter'] = f_basec
+		self.vol_ctr_info[f_cluster][f_svm][f_vol][f_ctr]['properties'] = f_props
+		self.vol_ctr_info[f_cluster][f_svm][f_vol][f_ctr]['type'] = f_type
+		self.vol_ctr_info[f_cluster][f_svm][f_vol][f_ctr]['unit'] = f_unit
+
+	    except IndexError:
+		self.tellme("caught exception parsing %s - %s" % (targ_file, line))

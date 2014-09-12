@@ -67,58 +67,61 @@ class MyDaemon(Daemon):
 		##  - targ_counters should be a dict which contains metric, metric-type and base-counter as required
 		if (old_data['timestamps'] != {}):
 		    for metric in new_data.keys():
-			if ((metric == 'timestamps') or (string.split(metric, '.')[-1] == 'volname')):
-			    pass
-			elif (string.split(metric, '.')[-1] == 'avg_latency'):
-			    metric_delta = long((new_data[metric])) - long((old_data[metric]))
-			    self.cdot_api_obj.tellme("metric_delta = %s - %s = %s" % (long(new_data[metric]), long(old_data[metric]), metric_delta))
-			    base_counter_lst = string.split(metric, '.')[:-1]
-			    base_counter_lst.append('total_ops')
-			    base_counter = string.join(base_counter_lst, '.')
-			    try:
-				metric_base_delta = long((new_data[base_counter])) - long((old_data[base_counter]))
-				self.cdot_api_obj.tellme("metric_base_delta = %s - %s = %s" % (long(new_data[base_counter]), long(old_data[base_counter]), metric_base_delta))
-			    except KeyError:
-				metric_base_delta = 0
-				self.cdot_api_obj.tellme("Hit KeyError - setting metric_base_delta = 0")
-			    try:
-				metric_rate = metric_delta / metric_base_delta
-			    except ZeroDivisionError:
-				self.cdot_api_obj.tellme("hit div by 0")
-				metric_rate = 0
-			    self.cdot_api_obj.tellme("metric_rate = %s / %s" % (metric_delta, metric_base_delta))
-			    self.cdot_api_obj.tellme(">>>%s -> %s" % (metric, metric_rate))
-			    cs.gauge(metric, metric_rate)
-			    self.cdot_api_obj.tellme("Submitted Gauge for %s, %s" % (metric, metric_rate))
-			else:
-			    ## For each metric in new_data & old_data;
-			    ##  - Calculate elapsed time
-			    ##  - Work out diff between values, divide by secs
-			    ##TODO:
-			    """
-			    Traceback (most recent call last):
-			      File "./test_cdot_api_pull.py", line 23, in <module>
-				main()
-			      File "./test_cdot_api_pull.py", line 19, in main
-				test.run()
-			      File "/home/duane/cdot_api_pull/cdot_api_pull.py", line 95, in run
+			try:
+			    if ((metric == 'timestamps') or (string.split(metric, '.')[-1] == 'volname')):
+				pass
+			    elif (string.split(metric, '.')[-1] == 'avg_latency'):
+				metric_delta = long((new_data[metric])) - long((old_data[metric]))
+				self.cdot_api_obj.tellme("metric_delta = %s - %s = %s" % (long(new_data[metric]), long(old_data[metric]), metric_delta))
+				base_counter_lst = string.split(metric, '.')[:-1]
+				base_counter_lst.append('total_ops')
+				base_counter = string.join(base_counter_lst, '.')
+				try:
+				    metric_base_delta = long((new_data[base_counter])) - long((old_data[base_counter]))
+				    self.cdot_api_obj.tellme("metric_base_delta = %s - %s = %s" % (long(new_data[base_counter]), long(old_data[base_counter]), metric_base_delta))
+				except KeyError:
+				    metric_base_delta = 0
+				    self.cdot_api_obj.tellme("Hit KeyError - setting metric_base_delta = 0")
+				try:
+				    metric_rate = metric_delta / metric_base_delta
+				except ZeroDivisionError:
+				    self.cdot_api_obj.tellme("hit div by 0")
+				    metric_rate = 0
+				self.cdot_api_obj.tellme("metric_rate = %s / %s" % (metric_delta, metric_base_delta))
+				self.cdot_api_obj.tellme(">>>%s -> %s" % (metric, metric_rate))
+				cs.gauge(metric, metric_rate)
+				self.cdot_api_obj.tellme("Submitted Gauge for %s, %s" % (metric, metric_rate))
+			    else:
+				## For each metric in new_data & old_data;
 				##  - Calculate elapsed time
-			    KeyError: u'brisvegas.vs1.userdata_ls1.write_data'
-			    """
-			    old_ts = long((old_data['timestamps'][metric]).encode('ascii','ignore'))
-			    new_ts = long((new_data['timestamps'][metric]).encode('ascii','ignore'))
-			    self.cdot_api_obj.tellme("Doing comparison for %s" % metric)
-			    #self.cdot_api_obj.tellme("old_ts:: %s" % old_ts)
-			    #self.cdot_api_obj.tellme("new_ts:: %s" % new_ts)
-			    #self.cdot_api_obj.tellme("old: %s -> value: %s" % (metric, old_data[metric]))
-			    #self.cdot_api_obj.tellme("new: %s -> value: %s" % (metric, new_data[metric]))
-			    ts_delta = new_ts - old_ts
-			    metric_delta = long((new_data[metric])) - long((old_data[metric]))
-			    metric_rate = metric_delta / ts_delta
-			    #self.cdot_api_obj.tellme("ts_delta: %s, metric_delta %s" % (ts_delta, metric_delta))
-			    #self.cdot_api_obj.tellme("metric_rate: %s" % metric_rate)
-			    cs.gauge(metric, metric_rate)
-			    self.cdot_api_obj.tellme("Submitted Gauge for %s, %s" % (metric, metric_rate))
+				##  - Work out diff between values, divide by secs
+				##TODO:
+				"""
+				Traceback (most recent call last):
+				  File "./test_cdot_api_pull.py", line 23, in <module>
+				    main()
+				  File "./test_cdot_api_pull.py", line 19, in main
+				    test.run()
+				  File "/home/duane/cdot_api_pull/cdot_api_pull.py", line 108, in run
+				    ##  - Calculate elapsed time
+				KeyError: u'brisvegas.vs1.userdata_ls1.write_data'
+				"""
+				old_ts = long((old_data['timestamps'][metric]).encode('ascii','ignore'))
+				new_ts = long((new_data['timestamps'][metric]).encode('ascii','ignore'))
+				self.cdot_api_obj.tellme("Doing comparison for %s" % metric)
+				#self.cdot_api_obj.tellme("old_ts:: %s" % old_ts)
+				#self.cdot_api_obj.tellme("new_ts:: %s" % new_ts)
+				#self.cdot_api_obj.tellme("old: %s -> value: %s" % (metric, old_data[metric]))
+				#self.cdot_api_obj.tellme("new: %s -> value: %s" % (metric, new_data[metric]))
+				ts_delta = new_ts - old_ts
+				metric_delta = long((new_data[metric])) - long((old_data[metric]))
+				metric_rate = metric_delta / ts_delta
+				#self.cdot_api_obj.tellme("ts_delta: %s, metric_delta %s" % (ts_delta, metric_delta))
+				#self.cdot_api_obj.tellme("metric_rate: %s" % metric_rate)
+				cs.gauge(metric, metric_rate)
+				self.cdot_api_obj.tellme("Submitted Gauge for %s, %s" % (metric, metric_rate))
+			except KeyError:
+			    self.cdot_api_obj.tellme("cdot_api_pull.py:run(): Caught Exception for metric %s" % metric)
 		## New stats set to old, old ones nuked
 		old = new
 		new = []
