@@ -269,6 +269,5 @@ class CdotPerf:
 		self.vol_ctr_info[f_cluster][f_svm][f_vol][f_ctr]['properties'] = f_props
 		self.vol_ctr_info[f_cluster][f_svm][f_vol][f_ctr]['type'] = f_type
 		self.vol_ctr_info[f_cluster][f_svm][f_vol][f_ctr]['unit'] = f_unit
-
 	    except IndexError:
 		self.tellme("caught exception parsing %s - %s" % (targ_file, line))

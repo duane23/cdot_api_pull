@@ -75,53 +75,87 @@ class MyDaemon(Daemon):
 		## 
 		## 
 		## 
-		## 
-		print self.cdot_api_obj.load_vol_counters()
+		## This loads the vol counter info into cdot_api_obj.vol_ctr_info
+		self.cdot_api_obj.load_vol_counters()
 		if (old_data['timestamps'] != {}):
 		    for metric in new_data.keys():
 			try:
-			    if ((metric == 'timestamps') or (string.split(metric, '.')[-1] == 'volname')):
+			    try:
+				self.cdot_api_obj.tellme("Processing metric %s" % metric)
+				m_fields  = string.split(metric, '.')
+				m_cluster = m_fields[0]
+				m_svm     = m_fields[1]
+				m_vol     = m_fields[2]
+				m_ctr     = m_fields[3]
+				m_ctr_info = self.cdot_api_obj.vol_ctr_info[m_cluster][m_svm][m_vol][m_ctr]
+				m_base_counter = m_ctr_info['base-counter']  # if this exists we need to process counter more carefully
+				m_properties   = m_ctr_info['properties']    # raw, rate, average, delta, percentage
+				m_units        = m_ctr_info['unit']          # seconds, microseconds, bytes, etc
+				m_type         = m_ctr_info['type']          # array or blank
+			    except IndexError:
+				self.cdot_api_obj.tellme("hit IndexError for metric: %s" % metric)
+			    ## Is this a valid counter?
+			    if ((metric == 'timestamps') or (string.split(metric, '.')[-1] == 'volname') or (string.split(metric, '.')[-1] == 'voluuid')):
+				self.cdot_api_obj.tellme("hit timestamps, volname or voluuid for metric: %s" % metric)
 				pass
-			    elif (string.split(metric, '.')[-1] == 'avg_latency'):
+			    ## If its a valid counter, does it need to be calculated as an average ?
+			    elif ((m_properties == 'average') or (m_properties == 'percentage')):
+				## Need to calculate average using metric and base-counter.
+				# Step 1 is to get difference between new and old values of metric
 				metric_delta = long((new_data[metric])) - long((old_data[metric]))
 				self.cdot_api_obj.tellme("metric_delta = %s - %s = %s" % (long(new_data[metric]), long(old_data[metric]), metric_delta))
+				# Next create metric string for base counter
 				base_counter_lst = string.split(metric, '.')[:-1]
-				base_counter_lst.append('total_ops')
+				base_counter_lst.append(m_base_counter)
 				base_counter = string.join(base_counter_lst, '.')
-				try:
-				    metric_base_delta = long((new_data[base_counter])) - long((old_data[base_counter]))
-				    self.cdot_api_obj.tellme("metric_base_delta = %s - %s = %s" % (long(new_data[base_counter]), long(old_data[base_counter]), metric_base_delta))
-				except KeyError:
-				    metric_base_delta = 0
-				    self.cdot_api_obj.tellme("Hit KeyError - setting metric_base_delta = 0")
-				try:
-				    metric_rate = metric_delta / metric_base_delta
-				except ZeroDivisionError:
-				    self.cdot_api_obj.tellme("hit div by 0")
-				    metric_rate = 0
-				self.cdot_api_obj.tellme("metric_rate = %s / %s" % (metric_delta, metric_base_delta))
+				# Now get difference between base counter (new ) and base counter (old)
+				metric_base_delta = long((new_data[base_counter])) - long((old_data[base_counter]))
+				# Now divide counter value by base counter value and we have our actual metric
+				# percentage gets multiplied by 100, average is left alone
+				if (m_properties == 'percentage'):
+				    try:
+					metric_rate = 100 * (metric_delta / metric_base_delta)
+				    except ZeroDivisionError:
+					self.cdot_api_obj.tellme("hit div by 0")
+					metric_rate = 0
+				else:
+				    try:
+					metric_rate = metric_delta / metric_base_delta
+				    except ZeroDivisionError:
+					self.cdot_api_obj.tellme("hit div by 0")
+					metric_rate = 0
+				self.cdot_api_obj.tellme(">>>metric_rate = %s / %s" % (metric_delta, metric_base_delta))
 				self.cdot_api_obj.tellme(">>>%s -> %s" % (metric, metric_rate))
 				cs.gauge(metric, metric_rate)
-				self.cdot_api_obj.tellme("Submitted Gauge for %s, %s" % (metric, metric_rate))
-			    else:
-				## For each metric in new_data & old_data;
-				##  - Calculate elapsed time
-				##  - Work out diff between values, divide by secs
-				##TODO:
+				self.cdot_api_obj.tellme("Submitted Gauge for %s, %s, m_properties = %s" % (metric, metric_rate, m_properties))
+			    elif (m_properties == 'raw'):
+				## Raw metrics are simply logged as the most recent value, no maths required.
+				metric_stored = long(new_data[metric])
+				cs.gauge(metric, metric_stored)
+			    elif (m_properties == 'delta'):
+				## Deltas are generally used for arrays - we don't handle these at this point.
+				pass
+				#cs.gauge(metric, metric_stored)
+			    elif (m_properties == 'rate'):
+				## Rate is the most common case - different between two values, divided by time elapsed.
+				# Calc elapsed time between new and old
 				old_ts = long((old_data['timestamps'][metric]).encode('ascii','ignore'))
 				new_ts = long((new_data['timestamps'][metric]).encode('ascii','ignore'))
-				self.cdot_api_obj.tellme("Doing comparison for %s" % metric)
+				ts_delta = new_ts - old_ts
+				# Calc counter change between new and old
+				metric_delta = long((new_data[metric])) - long((old_data[metric]))
+				# Divide change by elapapsed time (secs)
+				metric_rate = metric_delta / ts_delta
+				#self.cdot_api_obj.tellme("Doing comparison for %s" % metric)
 				#self.cdot_api_obj.tellme("old_ts:: %s" % old_ts)
 				#self.cdot_api_obj.tellme("new_ts:: %s" % new_ts)
 				#self.cdot_api_obj.tellme("old: %s -> value: %s" % (metric, old_data[metric]))
 				#self.cdot_api_obj.tellme("new: %s -> value: %s" % (metric, new_data[metric]))
-				ts_delta = new_ts - old_ts
-				metric_delta = long((new_data[metric])) - long((old_data[metric]))
-				metric_rate = metric_delta / ts_delta
 				#self.cdot_api_obj.tellme("ts_delta: %s, metric_delta %s" % (ts_delta, metric_delta))
 				#self.cdot_api_obj.tellme("metric_rate: %s" % metric_rate)
+				# Log resulting value
 				cs.gauge(metric, metric_rate)
-				self.cdot_api_obj.tellme("Submitted Gauge for %s, %s" % (metric, metric_rate))
+				self.cdot_api_obj.tellme("Submitted Gauge for %s, %s, m_properties = %s" % (metric, metric_rate, m_properties))
 			except KeyError:
 			    self.cdot_api_obj.tellme("cdot_api_pull.py:run(): Caught Exception processing metric %s" % metric)
 		## New stats set to old, old ones nuked
