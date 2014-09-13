@@ -159,6 +159,63 @@ class CdotPerf:
 	    ctrs[ctr['name']] = ctr['value']
 	return ctrs
 
+    def get_object_instance_list_info(self, object_name):
+
+	api = NaElement("perf-object-instance-list-info-iter")
+	#
+	xi = NaElement("desired-attributes")
+	api.child_add(xi)
+	#
+	#
+	#xi1 = NaElement("instance-info")
+	#xi.child_add(xi1)
+	#
+	#xi1.child_add_string("name","<name>")
+	#xi1.child_add_string("uuid","<uuid>")
+	#api.child_add_string("filter-data","<filter-data>")
+	api.child_add_string("max-records",1000000)
+	api.child_add_string("objectname",object_name)
+	#
+#	xi2 = NaElement("query")
+#	api.child_add(xi2)
+	#
+	#
+#	xi3 = NaElement("instance-info")
+#	xi2.child_add(xi3)
+	#
+#	xi3.child_add_string("name","<name>")
+#	xi3.child_add_string("uuid","<uuid>")
+#	api.child_add_string("tag","<tag>")
+	#
+	xo = self.s.invoke_elem(api)
+	if (xo.results_status() == "failed") :
+	    print ("Error:\n")
+	    print (xo.sprintf())
+	    sys.exit (1)
+	#
+	print ("Received:\n")
+	print (xo.sprintf())
+
+	ctrs = {}
+	xo = self.s.invoke_elem(api)
+	self.sd.incr("api.invoke")
+	if (xo.results_status() == "failed") :
+	    ## Volumes which are currently offline will error here as no counters are collected
+	    print xo.sprintf()
+	    return ctrs
+	try:
+	    f = xmltodict.parse(xo.sprintf())
+	except xml.parsers.expat.ExpatError:
+	    print xo.sprintf()
+#	ctrs['timestamp'] = f['results']['timestamp']
+#	ctrs['volname']   = f['results']['instances']['instance-data']['name']
+#	ctrs['voluuid']   = f['results']['instances']['instance-data']['uuid']
+#	for ctr in f['results']['instances']['instance-data']['counters']['counter-data']:
+#	    ctrs[ctr['name']] = ctr['value']
+#	return ctrs
+
+
+
     def get_counters_by_uuid(self, instance_uuid, object_name, counter_filter_list=None):
 	api = NaElement("perf-object-get-instances")
 	xi = NaElement("counters")
