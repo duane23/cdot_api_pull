@@ -14,58 +14,34 @@ from CdotPerf import CdotPerf
 
 def main():
     cdot_api_obj = CdotPerf('brisvegas', '10.128.153.60','BNELAB\\duanes','D3m0open', "1.21")
-#    counter_info = {}
-#    objlist = cdot_api_obj.get_perf_objects()
-#    for t in objlist:
-#	counter_info[t] = {}
-#        for line in cdot_api_obj.get_object_counter_info(t):
-#	    counter_info[t][string.split(line,'|')[0]] = line
-#	    cdot_api_obj.tellme("list_perf_metrics.py: %s, %s" % (t, line))
-	    #print "list_perf_metrics.py: object: %s, metric: %s" % (t, line)
+    counter_info = {}
+    objlist = cdot_api_obj.get_perf_objects()
+    #for t in objlist:
+	#counter_info[t] = {}
+        #for line in cdot_api_obj.get_object_counter_info(t):
+	#    counter_info[t][string.split(line,'|')[0]] = line
+	#    cdot_api_obj.tellme("list_perf_metrics.py: %s, %s" % (t, line))
 
+	    #print "list_perf_metrics.py: object: %s, metric: %s" % (t, line)
+    ##
     ## Now that we have a list of objects (objlist) and a list of counters
     ## that are available for each type of object (counter_info)
     ## Now we need a list of instances of each object type (instances are the actual 
     ## elements on the cluster, ie vol0 or aggr01_01
-
-
-    api = NaElement("perf-object-instance-list-info-iter")
-    #
-#    xi = NaElement("desired-attributes")
-#    api.child_add(xi)
-    #
-    #
-#    xi1 = NaElement("instance-info")
-#    xi.child_add(xi1)
-    #
-#    xi1.child_add_string("name","<name>")
-#    xi1.child_add_string("uuid","<uuid>")
-    #api.child_add_string("filter-data","<filter-data>")
-    api.child_add_string("max-records",4294967295)
-    api.child_add_string("objectname","cluster_peer")
-    #
-#    xi2 = NaElement("query")
-#    api.child_add(xi2)
-    #
-    #
-#    xi3 = NaElement("instance-info")
-#    xi2.child_add(xi3)
-    #
-#    xi3.child_add_string("name","<name>")
-#    xi3.child_add_string("uuid","<uuid>")
-#    api.child_add_string("tag","<tag>")
-
-    xo = cdot_api_obj.s.invoke_elem(api)
-    if (xo.results_status() == "failed") :
-	print ("Error:\n")
-	print (xo.sprintf())
-	sys.exit (1)
-    print ("Received:\n")
-    print (xo.sprintf())
-
-
-
-
+    ##
+    for t in objlist:
+	if (t != 'iscsi_conn:session'):
+	    print "getting for obj: %s" % t
+	    api = NaElement("perf-object-instance-list-info-iter")
+	    api.child_add_string("max-records",4294967295)
+	    api.child_add_string("objectname",t)
+	    xo = cdot_api_obj.s.invoke_elem(api)
+	    if (xo.results_status() == "failed") :
+		print ("Error:\n")
+		print (xo.sprintf())
+	    print xmltodict.parse(xo.sprintf())
+	else:
+	    print "skipping %s" % t
 
     sys.exit(0)
     for v in cdot_api_obj.get_volumes():
