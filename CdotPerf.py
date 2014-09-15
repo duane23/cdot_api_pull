@@ -335,3 +335,53 @@ class CdotPerf:
 		self.vol_ctr_info[f_cluster][f_svm][f_vol][f_ctr]['unit'] = f_unit
 	    except IndexError:
 		self.tellme("caught exception parsing %s - %s" % (targ_file, line))
+
+    def load_perf_counters(self, targ_file="/home/duane/cdot_api_pull/perf-counter-list.out"):
+	self.perf_ctr_info = {}
+	lines = open(targ_file).read()
+	for line in string.split(lines, '\n'):
+	    try:
+		fields = string.split(line, '|')
+		if (len(fields) == 14):
+		    f_object_name   = fields[0]
+		    f_instance_name = fields[1]
+		    f_instance_uuid = fields[2]
+		    f_counter_name  = fields[3]
+		    f_counter_desc  = fields[4]
+		    f_privs         = fields[5]
+		    f_junk          = fields[6]
+		    f_base_counter  = fields[7]    # use
+		    f_iskey         = fields[8]
+		    f_labels        = fields[9]    # use
+		    f_properties    = fields[10]   # use
+		    f_junk          = fields[11]
+		    f_type          = fields[12]   # use
+		    f_unit          = fields[13]   # use
+		    #
+		    # Store details as;
+		    #  { object_name : { instance_name : { instance_uuid : { counter_name : { counter_name : value
+		    #                                                                         
+		    # f_object_name.f_instance_uuid.f_counter_name
+		    if f_object_name not in self.perf_ctr_info:
+			self.perf_ctr_info[f_object_name] = {}
+		    if f_instance_uuid not in self.perf_ctr_info[f_object_name]:
+			self.perf_ctr_info[f_object_name][f_instance_uuid] = {}
+		    if f_counter_name not in self.perf_ctr_info[f_object_name][f_instance_uuid]:
+			self.perf_ctr_info[f_object_name][f_instance_uuid][f_counter_name] = {}
+		    #
+		    self.perf_ctr_info[f_object_name][f_instance_uuid][f_counter_name]['object-name'] = f_object_name
+		    self.perf_ctr_info[f_object_name][f_instance_uuid][f_counter_name]['counter-name'] = f_counter_name
+		    self.perf_ctr_info[f_object_name][f_instance_uuid][f_counter_name]['instance-name'] = f_instance_name
+		    self.perf_ctr_info[f_object_name][f_instance_uuid][f_counter_name]['instance-uuid'] = f_instance_uuid
+		    self.perf_ctr_info[f_object_name][f_instance_uuid][f_counter_name]['base-counter'] = f_base_counter
+		    self.perf_ctr_info[f_object_name][f_instance_uuid][f_counter_name]['labels'] = f_labels
+		    self.perf_ctr_info[f_object_name][f_instance_uuid][f_counter_name]['properties'] = f_properties
+		    self.perf_ctr_info[f_object_name][f_instance_uuid][f_counter_name]['type'] = f_type
+		    self.perf_ctr_info[f_object_name][f_instance_uuid][f_counter_name]['unit'] = f_unit
+		else:
+		    print "parsing line failed for >>%s<<" % line
+
+	    except IndexError:
+		print "caught exception parsing %s - %s" % (targ_file, line)
+		self.tellme("caught exception parsing %s - %s" % (targ_file, line))
+
