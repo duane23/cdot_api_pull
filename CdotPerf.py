@@ -153,8 +153,8 @@ class CdotPerf:
 	except xml.parsers.expat.ExpatError:
 	    print xo.sprintf()
 	ctrs['timestamp'] = f['results']['timestamp']
-	ctrs['volname']   = f['results']['instances']['instance-data']['name']
-	ctrs['voluuid']   = f['results']['instances']['instance-data']['uuid']
+	ctrs['name']   = f['results']['instances']['instance-data']['name']
+	ctrs['uuid']   = f['results']['instances']['instance-data']['uuid']
 	for ctr in f['results']['instances']['instance-data']['counters']['counter-data']:
 	    ctrs[ctr['name']] = ctr['value']
 	return ctrs
@@ -246,8 +246,8 @@ class CdotPerf:
 	except xml.parsers.expat.ExpatError:
 	    print xo.sprintf()
 	ctrs['timestamp'] = f['results']['timestamp']
-	ctrs['volname']   = f['results']['instances']['instance-data']['name']
-	ctrs['voluuid']   = f['results']['instances']['instance-data']['uuid']
+	ctrs['name']   = f['results']['instances']['instance-data']['name']
+	ctrs['uuid']   = f['results']['instances']['instance-data']['uuid']
 	for ctr in f['results']['instances']['instance-data']['counters']['counter-data']:
 	    ctrs[ctr['name']] = ctr['value']
 	return ctrs
