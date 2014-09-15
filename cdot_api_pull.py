@@ -27,6 +27,48 @@ class MyDaemon(Daemon):
     ##   - Before and after API calls. 
     ##   - Also try and record number of metrics sent to grpahite
 
+    def get_cpu_counters(self):
+	"""
+	processor|processor0|brisvegas-01:kernel:processor0|domain_busy|Array of processor time in percentage spent in various domains|diag||processor_elapsed_time||idle,kahuna,storage,exempt,raid,raid_exempt,target,dnscache,cifs,wafl_exempt,wafl_xcleaner,sm_exempt,cluster,protocol,nwk_exclusive,nwk_exempt,nwk_legacy,hostOS,ssan_exempt|percent||array|percent
+	processor|processor1|brisvegas-01:kernel:processor1|domain_busy|Array of processor time in percentage spent in various domains|diag||processor_elapsed_time||idle,kahuna,storage,exempt,raid,raid_exempt,target,dnscache,cifs,wafl_exempt,wafl_xcleaner,sm_exempt,cluster,protocol,nwk_exclusive,nwk_exempt,nwk_legacy,hostOS,ssan_exempt|percent||array|percent
+	processor|processor2|brisvegas-01:kernel:processor2|domain_busy|Array of processor time in percentage spent in various domains|diag||processor_elapsed_time||idle,kahuna,storage,exempt,raid,raid_exempt,target,dnscache,cifs,wafl_exempt,wafl_xcleaner,sm_exempt,cluster,protocol,nwk_exclusive,nwk_exempt,nwk_legacy,hostOS,ssan_exempt|percent||array|percent
+	processor|processor3|brisvegas-01:kernel:processor3|domain_busy|Array of processor time in percentage spent in various domains|diag||processor_elapsed_time||idle,kahuna,storage,exempt,raid,raid_exempt,target,dnscache,cifs,wafl_exempt,wafl_xcleaner,sm_exempt,cluster,protocol,nwk_exclusive,nwk_exempt,nwk_legacy,hostOS,ssan_exempt|percent||array|percent
+
+	#>>> print j.get_counters_by_uuid('brisvegas-01:kernel:processor0','processor')
+	{
+	 u'instance_uuid'         : u'brisvegas-01:kernel:processor0',
+	 u'sk_switches'           : u'3778533186',
+	 u'node_uuid'             : u'3b686de5-bef4-11e2-9018-d13886323cbe',
+	  'timestamp'             : u'1410744971',
+	 u'process_name'          : None,
+	 u'domain_busy'           : u'3780667529877,17683496612,6420263317,114178115781,2176445056,22605800472,13381459,798,457659,13839395007,1063674698,117297187,324,1237590223,8612971078,23202170840,7266309575,212719775716,10773833',
+	 u'instance_name'         : u'processor0',
+	  'voluuid'               : u'brisvegas-01:kernel:processor0',
+	  'volname'               : u'processor0',
+	 u'processor_busy'        : u'461596150749',
+	 u'node_name'             : u'brisvegas-01',
+	 u'processor_elapsed_time': u'4242263680626',
+	 u'hard_switches'         : u'915768253'
+	}
+
+	processor:node|brisvegas-01|3b686de5-bef4-11e2-9018-d13886323cbe|domain_busy|Array of processor time in percentage spent in various domains|diag||processor_elapsed_time||idle,kahuna,storage,exempt,raid,raid_exempt,target,dnscache,cifs,wafl_exempt,wafl_xcleaner,sm_exempt,cluster,protocol,nwk_exclusive,nwk_exempt,nwk_legacy,hostOS,ssan_exempt|percent||array|percent
+
+	#>>> print j.get_counters_by_uuid('3b686de5-bef4-11e2-9018-d13886323cbe','processor:node')
+	{
+	 u'instance_uuid'         : u'3b686de5-bef4-11e2-9018-d13886323cbe',
+	 u'sk_switches'           : u'10111551525',
+	  'timestamp'             : u'1410745504',
+	 u'domain_busy'           : u'15320395468179,68507628068,56916037163,351980330102,7379812795,192243111605,77939641,852,1624756,76351228741,4516588547,439078082,580,4339912961,27265831707,84145293040,31294278317,696206360151,68120605',
+	 u'instance_name'         : u'brisvegas-01',
+	  'voluuid'               : u'3b686de5-bef4-11e2-9018-d13886323cbe',
+	  'volname'               : u'brisvegas-01',
+	 u'processor_busy'        : u'1650792621702',
+	 u'processor_elapsed_time': u'16971188089881',
+	 u'hard_switches'         : u'9991143890'
+	}
+	"""
+	pass
+
     def run(self):
 	self.cdot_api_obj = CdotPerf('brisvegas', '10.128.153.60','BNELAB\\duanes','D3m0open', "1.21")
 	## Connect to statsd
