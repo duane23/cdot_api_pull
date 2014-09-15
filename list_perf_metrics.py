@@ -16,12 +16,11 @@ def main():
     cdot_api_obj = CdotPerf('brisvegas', '10.128.153.60','BNELAB\\duanes','D3m0open', "1.21")
     counter_info = {}
     objlist = cdot_api_obj.get_perf_objects()
-    #for t in objlist:
-	#counter_info[t] = {}
-        #for line in cdot_api_obj.get_object_counter_info(t):
-	#    counter_info[t][string.split(line,'|')[0]] = line
-	#    cdot_api_obj.tellme("list_perf_metrics.py: %s, %s" % (t, line))
-
+    for t in objlist:
+	counter_info[t] = {}
+        for line in cdot_api_obj.get_object_counter_info(t):
+	    counter_info[t][string.split(line,'|')[0]] = line
+	    cdot_api_obj.tellme("list_perf_metrics.py: %s, %s" % (t, line))
 	    #print "list_perf_metrics.py: object: %s, metric: %s" % (t, line)
     ##
     ## Now that we have a list of objects (objlist) and a list of counters
@@ -31,36 +30,33 @@ def main():
     ##
     for t in objlist:
 	if (t != 'iscsi_conn:session'):
-	    print "getting for obj: %s" % t
+	    print "### getting for obj: %s" % t
 	    api = NaElement("perf-object-instance-list-info-iter")
 	    api.child_add_string("max-records",4294967295)
 	    api.child_add_string("objectname",t)
 	    xo = cdot_api_obj.s.invoke_elem(api)
-	    if (xo.results_status() == "failed") :
-		print ("Error:\n")
-		print (xo.sprintf())
-	    print xmltodict.parse(xo.sprintf())
+	    try:
+		if (xo.results_status() == "failed"):
+		    print "### lookup failed - no records found"
+		else:
+		    api_result = xmltodict.parse(xo.sprintf())
+		    num_results = int(api_result['results']['num-records'])
+		    if (num_results > 1):
+			for instance in xmltodict.parse(xo.sprintf())['results']['attributes-list']['instance-info']:
+			    if isinstance(instance, dict):
+				for ctr in counter_info[t].keys():
+				    print "%s|%s|%s|%s" % (t, instance['name'], instance['uuid'], counter_info[t][ctr])
+			    else:
+				print "### instance isn't dict: %s\n%s\n%s" % (instance, xo.sprintf(), xmltodict.parse(xo.sprintf()))
+		    elif (num_results == 1):
+			for ctr in counter_info[t].keys():
+			    print "%s|%s|%s|%s" % (t, api_result['results']['attributes-list']['instance-info']['name'], api_result['results']['attributes-list']['instance-info']['uuid'], counter_info[t][ctr])
+		    else:
+			print "### no records - valid lookup but no results"
+	    except:
+		print "### caught general exception - %s\n%s" % (xmltodict.parse(xo.sprintf()), xo.sprintf())
 	else:
-	    print "skipping %s" % t
-
-    sys.exit(0)
-    for v in cdot_api_obj.get_volumes():
-	try:
-	    c = cdot_api_obj.get_counters_by_uuid(v['instance-uuid'], 'volume')
-	    ctr_names = c.keys()
-	    ctr_names.sort()
-	    cdot_api_obj.tellme("list_vol_metrics.py: read_ops  for vol %s is %s" % (v['name'], counter_info['volume']['read_ops']))
-	    cdot_api_obj.tellme("list_vol_metrics.py: write_ops for vol %s is %s" % (v['name'], counter_info['volume']['write_ops']))
-	    for ctr in ctr_names:
-		try:
-		    cdot_api_obj.tellme("list_vol_metrics.py: Processing counter - %s" % (ctr))
-		    if ((ctr != "timestamp") and (ctr != "volname")):
-			print "%s|%s|%s|%s" % ("brisvegas", v['owning-vserver-name'], v['name'], counter_info['volume'][ctr])
-		except:
-		    cdot_api_obj.tellme("list_vol_metrics.py: Caught exception for ctr: %s, volume:: %s" % (ctr, v['name']))
-	except KeyError:
-	    cdot_api_obj.tellme("list_vol_metrics.py: Hit keyerror - ctr = %s, vol = %s" % (ctr, v['name']))
-	    continue
+	    print "### skipping %s - known issue parsing results" % t
 
 if __name__ == "__main__":
     main()
