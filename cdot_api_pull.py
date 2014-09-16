@@ -91,19 +91,87 @@ class MyDaemon(Daemon):
 	api.child_add_string("max-records",4294967295)
 	api.child_add_string("objectname",object_name)
 	xo = self.cdot_api_obj.s.invoke_elem(api)
+	new_data = {}
+	## For each instance returned...
 	for res in xmltodict.parse(xo.sprintf())['results']['attributes-list']['instance-info']:
 	    instance_uuid = res['uuid']
 	    ret = self.cdot_api_obj.get_counters_by_uuid(instance_uuid, object_name)
-	    for k in ret.keys():
-		print k, ret[k]
-	    print
-	#print xo.sprintf()
-	## Then get details for object processor
-
-	return {}
+	    new_data[instance_uuid] = ret
+	print new_data
+	sys.exit(0)
+	"""
+	ret looks like this:
+	{
+	  'name'                  : u'brisvegas-02',
+	  'timestamp'             : u'1410827873',
+	  'uuid'                  : u'5f1321d3-bf09-11e2-a4cd-0d332a085912',
+	 u'instance_uuid'         : u'5f1321d3-bf09-11e2-a4cd-0d332a085912',
+	 u'sk_switches'           : u'6382931669',
+	 u'domain_busy'           : u'14117193465452,47831875020,18655156292,121795780412,5640132174,39970740948,61230526,769,1259286,21401714815,1541595896,243641910,422,3340306754,21676456804,42195195164,22677559258,314128792974,57019574',
+	 u'instance_name'         : u'brisvegas-02',
+	 u'processor_busy'        : u'697549413742',
+	 u'processor_elapsed_time': u'14814742879194',
+	 u'hard_switches'         : u'11124113709'
+	}
+	old_data is a dict of ret objects, with instance_uuid as keys
+	{
+	 'instance_uuid' : {ret object},
+	 'instance_uuid' : {ret object}
+	}
+	"""
+	#print ret
+	## For each counter returned...
+	print "name: %(name)s, instance-name: %(instance_name)s, instance-uuid: %(instance_uuid)s, timestamp: %(timestamp)s" % ret
+	print "ret.keys(): %s" % ret.keys()
+	r_instance_uuid          = ret['instance_uuid']
+	r_sk_switches            = ret['sk_switches']
+	r_name                   = ret['name']
+	r_timestamp              = ret['timestamp']
+	r_uuid                   = ret['uuid']
+	r_domain_busy            = ret['domain_busy']
+	r_instance_name          = ret['instance_name']
+	r_processor_busy         = ret['processor_busy']
+	r_processor_elapsed_time = ret['processor_elapsed_time']
+	r_hard_switches          = ret['hard_switches']
+	#
+	for k in ret.keys():
+	    if (k not in ['timestamp','instance_name','instance_uuid','name','uuid']):
+		k_info = self.cdot_api_obj.perf_ctr_info[object_name][instance_uuid][k]
+		if (k_info['properties'] == 'array'):
+		    #print "processing array type for counter %s" % k
+		    pass
+		elif (k_info['properties'] == "percent"):
+		    print "processing percent type for counter %s." % k
+		    print "       Using counter %s (%s) and base-counter %s (%s)" % (k, ret[k], k_info['base-counter'], ret[k_info['base-counter']])
+		    #print "%s / %s" % (ret[k], ret[k_info]['base-counter'])
+		    #print ">>%s" % ret 
+		elif (k_info['properties'] == "average"):
+		    #print "processing average type for counter %s" % k
+		    pass
+		else:
+		    #print "processing something else here: %s, %s" % (k, k_info['properties'])
+		    pass
+	for ctr in self.cdot_api_obj.perf_ctr_info[object_name][instance_uuid].keys():
+	    ctr_info = self.cdot_api_obj.perf_ctr_info[object_name][instance_uuid][ctr]
+	    c_properties = ctr_info['properties']
+	    c_base_counter = ctr_info['base-counter']
+#		print "object-name: %(object-name)s" % ctr_info
+#		print "counter-name: %(counter-name)s" % ctr_info
+#		print "instance-name: %(instance-name)s" % ctr_info
+#		print "instance-uuid: %(instance-uuid)s" % ctr_info
+#		print "base-counter: %(base-counter)s" % ctr_info
+#		print "labels: %(labels)s" % ctr_info
+#		print "unit: %(unit)s" % ctr_info
+#		print "type: %(type)s" % ctr_info
+#		print "properties: %(properties)s" % ctr_info
+    #print xo.sprintf()
+    ## Then get details for object processor
+    #sys.exit(0)
+    #return new_data
 
     def run(self):
 	self.cdot_api_obj = CdotPerf('brisvegas', '10.128.153.60','BNELAB\\duanes','D3m0open', "1.21")
+	self.cdot_api_obj.load_perf_counters()
 	print self.get_cpu_counters({})
 	## Connect to statsd
 	cs = statsd.StatsClient('localhost',8125)
