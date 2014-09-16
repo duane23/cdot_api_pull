@@ -21,59 +21,12 @@ from Daemon import Daemon
 
 class MyDaemon(Daemon):
 
-    ## TODO - Instrument this code
-    ##
-    ##  Add timing points to this code
-    ##   - Before and after API calls. 
-    ##   - Also try and record number of metrics sent to grpahite
-
-    """
-    processor|processor0|brisvegas-01:kernel:processor0|domain_busy|Array of processor time in percentage spent in various domains|diag||processor_elapsed_time||idle,kahuna,storage,exempt,raid,raid_exempt,target,dnscache,cifs,wafl_exempt,wafl_xcleaner,sm_exempt,cluster,protocol,nwk_exclusive,nwk_exempt,nwk_legacy,hostOS,ssan_exempt|percent||array|percent
-    processor|processor1|brisvegas-01:kernel:processor1|domain_busy|Array of processor time in percentage spent in various domains|diag||processor_elapsed_time||idle,kahuna,storage,exempt,raid,raid_exempt,target,dnscache,cifs,wafl_exempt,wafl_xcleaner,sm_exempt,cluster,protocol,nwk_exclusive,nwk_exempt,nwk_legacy,hostOS,ssan_exempt|percent||array|percent
-    processor|processor2|brisvegas-01:kernel:processor2|domain_busy|Array of processor time in percentage spent in various domains|diag||processor_elapsed_time||idle,kahuna,storage,exempt,raid,raid_exempt,target,dnscache,cifs,wafl_exempt,wafl_xcleaner,sm_exempt,cluster,protocol,nwk_exclusive,nwk_exempt,nwk_legacy,hostOS,ssan_exempt|percent||array|percent
-    processor|processor3|brisvegas-01:kernel:processor3|domain_busy|Array of processor time in percentage spent in various domains|diag||processor_elapsed_time||idle,kahuna,storage,exempt,raid,raid_exempt,target,dnscache,cifs,wafl_exempt,wafl_xcleaner,sm_exempt,cluster,protocol,nwk_exclusive,nwk_exempt,nwk_legacy,hostOS,ssan_exempt|percent||array|percent
-
-    #>>> print j.get_counters_by_uuid('brisvegas-01:kernel:processor0','processor')
-    {
-     u'instance_uuid'         : u'brisvegas-01:kernel:processor0',
-     u'sk_switches'           : u'3778533186',
-     u'node_uuid'             : u'3b686de5-bef4-11e2-9018-d13886323cbe',
-      'timestamp'             : u'1410744971',
-     u'process_name'          : None,
-     u'domain_busy'           : u'3780667529877,17683496612,6420263317,114178115781,2176445056,22605800472,13381459,798,457659,13839395007,1063674698,117297187,324,1237590223,8612971078,23202170840,7266309575,212719775716,10773833',
-     u'instance_name'         : u'processor0',
-      'uuid'                  : u'brisvegas-01:kernel:processor0',
-      'name'                  : u'processor0',
-     u'processor_busy'        : u'461596150749',
-     u'node_name'             : u'brisvegas-01',
-     u'processor_elapsed_time': u'4242263680626',
-     u'hard_switches'         : u'915768253'
-    }
-
-    processor:node|brisvegas-01|3b686de5-bef4-11e2-9018-d13886323cbe|domain_busy|Array of processor time in percentage spent in various domains|diag||processor_elapsed_time||idle,kahuna,storage,exempt,raid,raid_exempt,target,dnscache,cifs,wafl_exempt,wafl_xcleaner,sm_exempt,cluster,protocol,nwk_exclusive,nwk_exempt,nwk_legacy,hostOS,ssan_exempt|percent||array|percent
-
-    #>>> print j.get_counters_by_uuid('3b686de5-bef4-11e2-9018-d13886323cbe','processor:node')
-    {
-     u'instance_uuid'         : u'3b686de5-bef4-11e2-9018-d13886323cbe',
-     u'sk_switches'           : u'10111551525',
-      'timestamp'             : u'1410745504',
-     u'domain_busy'           : u'15320395468179,68507628068,56916037163,351980330102,7379812795,192243111605,77939641,852,1624756,76351228741,4516588547,439078082,580,4339912961,27265831707,84145293040,31294278317,696206360151,68120605',
-     u'instance_name'         : u'brisvegas-01',
-      'voluuid'               : u'3b686de5-bef4-11e2-9018-d13886323cbe',
-      'volname'               : u'brisvegas-01',
-     u'processor_busy'        : u'1650792621702',
-     u'processor_elapsed_time': u'16971188089881',
-     u'hard_switches'         : u'9991143890'
-    }
-    """
     def get_cpu_counters(self, old_data, counter_req_list=None):
-	pass
 	## Accepts:
 	##  - old_data (dict of old counter values)
 	##  - counter_req_list
 	## Returns:
 	##  - dict of new counter values
-	## 
 	## Actions:
 	##   Collect new dict of new counter values
 	##     (1) First get list of name/uuid for instances of processor & processor:node
@@ -107,81 +60,50 @@ class MyDaemon(Daemon):
 		    counter_info = self.cdot_api_obj.perf_ctr_info[object_name][inst][counter]
 		    if (counter_info['properties'] == "percent"):
 			if (counter_info['type'] != 'array'):
-			    #print "processing percent type for counter %s." % counter
-			    #print "       Using counter %s (%s) and base-counter %s (%s)" % (counter, new_data[inst][counter], counter_info['base-counter'], new_data[inst][counter_info['base-counter']])
-			    #print "       With timestamp: %s" % (new_data[inst]['timestamp'])
 			    per_new_metric    = float(new_data[inst][counter])
-			    #print "per_new_metric", per_new_metric
 			    per_old_metric    = float(old_data[inst][counter])
-			    #print "per_old_metric", per_old_metric
 			    per_new_base_c    = float(new_data[inst][counter_info['base-counter']])
-			    #print "per_new_base_c", per_new_base_c
 			    per_old_base_c    = float(old_data[inst][counter_info['base-counter']])
-			    #print "per_old_base_c", per_old_base_c
 			    per_result        = 100 * ((per_new_metric - per_old_metric) / (per_new_base_c - per_old_base_c))
-			    #print "Result is %s" % per_result
-			    ## Need to log data here
-			    ##  - cluster_name . instance_name . counter_name
-			    #print "%s.%s.%s = %s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter, per_result)
 			    self.cs.gauge("%s.%s.%s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter), per_result)
+			else:
+			    new_metrics = string.split(new_data[inst][counter],",")
+			    old_metrics = string.split(old_data[inst][counter],",")
+			    new_num_metrics = len(new_metrics)
+			    old_num_metrics = len(old_metrics)
+			    base_counter = counter_info['base-counter']
+			    new_base_counter = float(new_data[inst][base_counter])
+			    old_base_counter = float(old_data[inst][base_counter])
+			    labels = string.split(counter_info['labels'],",")
+			    num_labels = len(labels)
+			    j = 0
+			    while (j < num_labels):
+				lab_result = 100*((float(new_metrics[j]) - float(old_metrics[j])) / (new_base_counter - old_base_counter))
+				self.cs.gauge("%s.%s.%s.%s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter, labels[j]), lab_result)
+				j += 1
+		    elif (counter_info['properties'] == "rate"):
+			if (counter_info['type'] != 'array'):
+			    rte_new_metric    = float(new_data[inst][counter])
+			    rte_old_metric    = float(old_data[inst][counter])
+			    rte_new_timestamp = float(new_data[inst]['timestamp'])
+			    rte_old_timestamp = float(old_data[inst]['timestamp'])
+			    rte_result        = ((rte_new_metric - rte_old_metric) / (rte_new_timestamp - rte_old_timestamp))
+			    self.cs.gauge("%s.%s.%s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter), rte_result)
+			else:
+			    #not implemented yet
+			    pass
+		    elif (counter_info['properties'] == "delta,no-display"):
+			##counter only relevant as base-counter - ignore
+			pass
 	return new_data
 
-	"""
-	ret looks like this:
-	{
-	  'name'                  : u'brisvegas-02',
-	  'timestamp'             : u'1410827873',
-	  'uuid'                  : u'5f1321d3-bf09-11e2-a4cd-0d332a085912',
-	 u'instance_uuid'         : u'5f1321d3-bf09-11e2-a4cd-0d332a085912',
-	 u'sk_switches'           : u'6382931669',
-	 u'domain_busy'           : u'14117193465452,47831875020,18655156292,121795780412,5640132174,39970740948,61230526,769,1259286,21401714815,1541595896,243641910,422,3340306754,21676456804,42195195164,22677559258,314128792974,57019574',
-	 u'instance_name'         : u'brisvegas-02',
-	 u'processor_busy'        : u'697549413742',
-	 u'processor_elapsed_time': u'14814742879194',
-	 u'hard_switches'         : u'11124113709'
-	}
-	old_data is a dict of ret objects, with instance_uuid as keys
-	{
-	 'instance_uuid' : {ret object},
-	 'instance_uuid' : {ret object}
-	}
-	"""
-#	r_instance_uuid          = ret['instance_uuid']
-#	r_sk_switches            = ret['sk_switches']
-#	r_name                   = ret['name']
-#	r_timestamp              = ret['timestamp']
-#	r_uuid                   = ret['uuid']
-#	r_domain_busy            = ret['domain_busy']
-#	r_instance_name          = ret['instance_name']
-#	r_processor_busy         = ret['processor_busy']
-#	r_processor_elapsed_time = ret['processor_elapsed_time']
-#	r_hard_switches          = ret['hard_switches']
-#	#
-#	for k in ret.keys():
-#	    if (k not in ['timestamp','instance_name','instance_uuid','name','uuid']):
-#		k_info = self.cdot_api_obj.perf_ctr_info[object_name][instance_uuid][k]
-#		if (k_info['properties'] == 'array'):
-#		    pass
-#		elif (k_info['properties'] == "percent"):
-#		    print "processing percent type for counter %s." % k
-#		    print "       Using counter %s (%s) and base-counter %s (%s)" % (k, ret[k], k_info['base-counter'], ret[k_info['base-counter']])
-#		elif (k_info['properties'] == "average"):
-#		    pass
-#		else:
-#		    pass
-#	for ctr in self.cdot_api_obj.perf_ctr_info[object_name][instance_uuid].keys():
-#	    ctr_info = self.cdot_api_obj.perf_ctr_info[object_name][instance_uuid][ctr]
-#	    c_properties = ctr_info['properties']
-#	    c_base_counter = ctr_info['base-counter']
-
     def run(self):
+	## Connect to ZAPI
 	self.cdot_api_obj = CdotPerf('brisvegas', '10.128.153.60','BNELAB\\duanes','D3m0open', "1.21")
-
 	## Connect to statsd
 	self.cs = statsd.StatsClient('localhost',8125)
-
+	#load perf counter data from text file
 	self.cdot_api_obj.load_perf_counters()
-
 	## old / new are the lists of volumes as returned by get_volumes()
 	old = []
 	new = []
@@ -192,9 +114,9 @@ class MyDaemon(Daemon):
 	new_data['timestamps'] = {}
 	old_data = {}
 	while True:
+	    ## Collect and log CPI data
 	    old_cpu_perf_data = new_cpu_perf_data
 	    new_cpu_perf_data = self.get_cpu_counters(old_cpu_perf_data)
-
 	    ## Iterate over existing volumes for given set of counters
 	    new = self.cdot_api_obj.get_volumes()
 	    if (len(old) != 0):
@@ -299,7 +221,7 @@ class MyDaemon(Daemon):
 		## Should only be executed on first run
 		old = new
 		new = []
-	    time.sleep(30)
+	    time.sleep(10)
 
 def main():
     """
