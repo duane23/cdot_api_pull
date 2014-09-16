@@ -97,8 +97,35 @@ class MyDaemon(Daemon):
 	    instance_uuid = res['uuid']
 	    ret = self.cdot_api_obj.get_counters_by_uuid(instance_uuid, object_name)
 	    new_data[instance_uuid] = ret
-	print new_data
-	sys.exit(0)
+	if (old_data == {}):
+	    ## If old_data passed to sub is empty, return new_data. Can't process metrics without new+old
+	    return new_data
+	## Process metrics bsed on new+old data
+	for inst in new_data.keys():
+	    for counter in new_data[inst].keys():
+		if (counter not in ['timestamp','instance_name','instance_uuid','name','uuid']):
+		    counter_info = self.cdot_api_obj.perf_ctr_info[object_name][inst][counter]
+		    if (counter_info['properties'] == "percent"):
+			if (counter_info['type'] != 'array'):
+			    #print "processing percent type for counter %s." % counter
+			    #print "       Using counter %s (%s) and base-counter %s (%s)" % (counter, new_data[inst][counter], counter_info['base-counter'], new_data[inst][counter_info['base-counter']])
+			    #print "       With timestamp: %s" % (new_data[inst]['timestamp'])
+			    per_new_metric    = float(new_data[inst][counter])
+			    #print "per_new_metric", per_new_metric
+			    per_old_metric    = float(old_data[inst][counter])
+			    #print "per_old_metric", per_old_metric
+			    per_new_base_c    = float(new_data[inst][counter_info['base-counter']])
+			    #print "per_new_base_c", per_new_base_c
+			    per_old_base_c    = float(old_data[inst][counter_info['base-counter']])
+			    #print "per_old_base_c", per_old_base_c
+			    per_result        = 100 * ((per_new_metric - per_old_metric) / (per_new_base_c - per_old_base_c))
+			    #print "Result is %s" % per_result
+			    ## Need to log data here
+			    ##  - cluster_name . instance_name . counter_name
+			    #print "%s.%s.%s = %s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter, per_result)
+			    self.cs.gauge("%s.%s.%s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter), per_result)
+	return new_data
+
 	"""
 	ret looks like this:
 	{
@@ -119,70 +146,55 @@ class MyDaemon(Daemon):
 	 'instance_uuid' : {ret object}
 	}
 	"""
-	#print ret
-	## For each counter returned...
-	print "name: %(name)s, instance-name: %(instance_name)s, instance-uuid: %(instance_uuid)s, timestamp: %(timestamp)s" % ret
-	print "ret.keys(): %s" % ret.keys()
-	r_instance_uuid          = ret['instance_uuid']
-	r_sk_switches            = ret['sk_switches']
-	r_name                   = ret['name']
-	r_timestamp              = ret['timestamp']
-	r_uuid                   = ret['uuid']
-	r_domain_busy            = ret['domain_busy']
-	r_instance_name          = ret['instance_name']
-	r_processor_busy         = ret['processor_busy']
-	r_processor_elapsed_time = ret['processor_elapsed_time']
-	r_hard_switches          = ret['hard_switches']
-	#
-	for k in ret.keys():
-	    if (k not in ['timestamp','instance_name','instance_uuid','name','uuid']):
-		k_info = self.cdot_api_obj.perf_ctr_info[object_name][instance_uuid][k]
-		if (k_info['properties'] == 'array'):
-		    #print "processing array type for counter %s" % k
-		    pass
-		elif (k_info['properties'] == "percent"):
-		    print "processing percent type for counter %s." % k
-		    print "       Using counter %s (%s) and base-counter %s (%s)" % (k, ret[k], k_info['base-counter'], ret[k_info['base-counter']])
-		    #print "%s / %s" % (ret[k], ret[k_info]['base-counter'])
-		    #print ">>%s" % ret 
-		elif (k_info['properties'] == "average"):
-		    #print "processing average type for counter %s" % k
-		    pass
-		else:
-		    #print "processing something else here: %s, %s" % (k, k_info['properties'])
-		    pass
-	for ctr in self.cdot_api_obj.perf_ctr_info[object_name][instance_uuid].keys():
-	    ctr_info = self.cdot_api_obj.perf_ctr_info[object_name][instance_uuid][ctr]
-	    c_properties = ctr_info['properties']
-	    c_base_counter = ctr_info['base-counter']
-#		print "object-name: %(object-name)s" % ctr_info
-#		print "counter-name: %(counter-name)s" % ctr_info
-#		print "instance-name: %(instance-name)s" % ctr_info
-#		print "instance-uuid: %(instance-uuid)s" % ctr_info
-#		print "base-counter: %(base-counter)s" % ctr_info
-#		print "labels: %(labels)s" % ctr_info
-#		print "unit: %(unit)s" % ctr_info
-#		print "type: %(type)s" % ctr_info
-#		print "properties: %(properties)s" % ctr_info
-    #print xo.sprintf()
-    ## Then get details for object processor
-    #sys.exit(0)
-    #return new_data
+#	r_instance_uuid          = ret['instance_uuid']
+#	r_sk_switches            = ret['sk_switches']
+#	r_name                   = ret['name']
+#	r_timestamp              = ret['timestamp']
+#	r_uuid                   = ret['uuid']
+#	r_domain_busy            = ret['domain_busy']
+#	r_instance_name          = ret['instance_name']
+#	r_processor_busy         = ret['processor_busy']
+#	r_processor_elapsed_time = ret['processor_elapsed_time']
+#	r_hard_switches          = ret['hard_switches']
+#	#
+#	for k in ret.keys():
+#	    if (k not in ['timestamp','instance_name','instance_uuid','name','uuid']):
+#		k_info = self.cdot_api_obj.perf_ctr_info[object_name][instance_uuid][k]
+#		if (k_info['properties'] == 'array'):
+#		    pass
+#		elif (k_info['properties'] == "percent"):
+#		    print "processing percent type for counter %s." % k
+#		    print "       Using counter %s (%s) and base-counter %s (%s)" % (k, ret[k], k_info['base-counter'], ret[k_info['base-counter']])
+#		elif (k_info['properties'] == "average"):
+#		    pass
+#		else:
+#		    pass
+#	for ctr in self.cdot_api_obj.perf_ctr_info[object_name][instance_uuid].keys():
+#	    ctr_info = self.cdot_api_obj.perf_ctr_info[object_name][instance_uuid][ctr]
+#	    c_properties = ctr_info['properties']
+#	    c_base_counter = ctr_info['base-counter']
 
     def run(self):
 	self.cdot_api_obj = CdotPerf('brisvegas', '10.128.153.60','BNELAB\\duanes','D3m0open', "1.21")
-	self.cdot_api_obj.load_perf_counters()
-	print self.get_cpu_counters({})
+
 	## Connect to statsd
-	cs = statsd.StatsClient('localhost',8125)
+	self.cs = statsd.StatsClient('localhost',8125)
+
+	self.cdot_api_obj.load_perf_counters()
+
 	## old / new are the lists of volumes as returned by get_volumes()
 	old = []
 	new = []
 	## new_data / old data are the dicts of data
+	old_cpu_perf_data = {}
+	new_cpu_perf_data = {}
 	new_data = {}
 	new_data['timestamps'] = {}
 	old_data = {}
 	while True:
+	    old_cpu_perf_data = new_cpu_perf_data
+	    new_cpu_perf_data = self.get_cpu_counters(old_cpu_perf_data)
+
 	    ## Iterate over existing volumes for given set of counters
 	    new = self.cdot_api_obj.get_volumes()
 	    if (len(old) != 0):
@@ -256,12 +268,12 @@ class MyDaemon(Daemon):
 					metric_rate = 0
 				self.cdot_api_obj.tellme(">>>metric_rate = %s / %s" % (metric_delta, metric_base_delta))
 				self.cdot_api_obj.tellme(">>>%s -> %s" % (metric, metric_rate))
-				cs.gauge(metric, metric_rate)
+				self.cs.gauge(metric, metric_rate)
 				self.cdot_api_obj.tellme("Submitted Gauge for %s, %s, m_properties = %s" % (metric, metric_rate, m_properties))
 			    elif (m_properties == 'raw'):
 				## Raw metrics are simply logged as the most recent value, no maths required.
 				metric_stored = long(new_data[metric])
-				cs.gauge(metric, metric_stored)
+				self.cs.gauge(metric, metric_stored)
 			    elif (m_properties == 'delta'):
 				## Deltas are generally used for arrays - we don't handle these at this point.
 				pass
@@ -276,7 +288,7 @@ class MyDaemon(Daemon):
 				# Divide change by elapapsed time (secs)
 				metric_rate = metric_delta / ts_delta
 				# Log resulting value
-				cs.gauge(metric, metric_rate)
+				self.cs.gauge(metric, metric_rate)
 				self.cdot_api_obj.tellme("Submitted Gauge for %s, %s, m_properties = %s" % (metric, metric_rate, m_properties))
 			except KeyError:
 			    self.cdot_api_obj.tellme("cdot_api_pull.py:run(): Caught Exception processing metric %s" % metric)

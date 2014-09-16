@@ -379,9 +379,10 @@ class CdotPerf:
 		    self.perf_ctr_info[f_object_name][f_instance_uuid][f_counter_name]['type'] = f_type
 		    self.perf_ctr_info[f_object_name][f_instance_uuid][f_counter_name]['unit'] = f_unit
 		else:
-		    print "parsing line failed for >>%s<<" % line
+		    pass
+		    #print "parsing line failed for >>%s<<" % line
 
 	    except IndexError:
-		print "caught exception parsing %s - %s" % (targ_file, line)
+		#print "caught exception parsing %s - %s" % (targ_file, line)
 		self.tellme("caught exception parsing %s - %s" % (targ_file, line))
 
