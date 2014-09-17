@@ -14,26 +14,23 @@ from CdotPerf import CdotPerf
 from Daemon import Daemon
 from cdot_api_pull import MyDaemon
 
-cdot_api_obj = CdotPerf('brisvegas', '10.128.153.60','BNELAB\\duanes','D3m0open', "1.21")
+#cdot_api_obj = CdotPerf('brisvegas', '10.128.153.60','BNELAB\\duanes','D3m0open', "1.21")
+cdot_api_obj = CdotPerf('ngslabc82', '10.128.113.63','admin','Netapp01', "1.21")
 
 import sys
 sys.path.append("<path_to_nmsdk_root>/lib/python/NetApp")
 from NaServer import *
-
 
 api = NaElement("aggr-get-iter")
 
 xi = NaElement("desired-attributes")
 api.child_add(xi)
 
-
 xi1 = NaElement("aggr-attributes")
 xi.child_add(xi1)
 
-
 xi2 = NaElement("aggr-64bit-upgrade-attributes")
 xi1.child_add(xi2)
-
 
 xi3 = NaElement("aggr-check-attributes")
 xi2.child_add(xi3)
