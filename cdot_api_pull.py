@@ -16,11 +16,112 @@ from NaServer import *
 import xmltodict
 import statsd
 from CdotPerf import CdotPerf
+from pyZapi import pyZapi
 
 from Daemon import Daemon
 
 class MyDaemon(Daemon):
 
+    def get_raid_group_counters(self, old_data, counter_req_list=None):
+	## Accepts:
+	##  - old_data (dict of old counter values)
+	##  - counter_req_list
+	## Returns:
+	##  - dict of new counter values
+	## Actions:
+	##   Collect new dict of new counter values
+	##     (1) First get list of name/uuid for instances of processor & processor:node
+	##     (2) For each uuid cal get_counters by uuid
+	##     (3) Use new and old dicts of ctrs to cal cpu stats and %'ages
+	##     (4) Log stats to statsd
+	## Return dict of new counter values
+	##
+	## Calling function maintains track of new & old stats, accepting new ones as retval before 
+	## doing sleep, nuking old stats, resubmitting new as old when calling this sub again.
+	##
+	## First get details for object processor:node
+	object_name = "disk:raid_group"
+	api = NaElement("perf-object-instance-list-info-iter")
+	api.child_add_string("max-records",4294967295)
+	api.child_add_string("objectname",object_name)
+	xo = self.cdot_api_obj.s.invoke_elem(api)
+	self.cs.incr("api.invoke")
+	new_data = {}
+	#print xo.sprintf()
+	#sys.exit(0)
+	## For each instance returned...
+	for res in xmltodict.parse(xo.sprintf())['results']['attributes-list']['instance-info']:
+	    instance_uuid = res['uuid']
+	    instance_name = res['name']
+	    #print res
+	    ret = self.cdot_api_obj.get_counters_by_uuid(instance_uuid, object_name)
+	    new_data[instance_uuid] = ret
+	if (old_data == {}):
+	    ## If old_data passed to sub is empty, return new_data. Can't process metrics without new+old
+	    return new_data
+	## Process metrics bsed on new+old data
+	for inst in new_data.keys():
+	    for counter in new_data[inst].keys():
+		if (counter not in ['timestamp','instance_name','instance_uuid','name','uuid']):
+		    counter_info = self.cdot_api_obj.perf_ctr_info[object_name][inst][counter]
+		    if ((counter_info['properties'] == "raw") or (counter_info['properties'] == "raw,no-zero-values")):
+			if (counter_info['type'] != 'array'):
+			    per_new_metric    = float(new_data[inst][counter])
+			    self.cs.gauge("%s.%s.%s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter), per_new_metric)
+			    #print "%s.%s.%s = %s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter, per_result)
+			else:
+			    pass #not implemented
+		    elif (counter_info['properties'] == "percent"):
+			if (counter_info['type'] != 'array'):
+			    per_new_metric    = float(new_data[inst][counter])
+			    per_old_metric    = float(old_data[inst][counter])
+			    per_new_base_c    = float(new_data[inst][counter_info['base-counter']])
+			    per_old_base_c    = float(old_data[inst][counter_info['base-counter']])
+			    per_result        = 100 * ((per_new_metric - per_old_metric) / (per_new_base_c - per_old_base_c))
+			    self.cs.gauge("%s.%s.%s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter), per_result)
+			    #print "%s.%s.%s = %s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter, per_result)
+			else:
+			    new_metrics      = string.split(new_data[inst][counter],",")
+			    old_metrics      = string.split(old_data[inst][counter],",")
+			    new_num_metrics  = len(new_metrics)
+			    old_num_metrics  = len(old_metrics)
+			    base_counter     = counter_info['base-counter']
+			    new_base_counter = float(new_data[inst][base_counter])
+			    old_base_counter = float(old_data[inst][base_counter])
+			    labels           = string.split(counter_info['labels'],",")
+			    num_labels       = len(labels)
+			    j = 0
+			    while (j < num_labels):
+				lab_result = 100*((float(new_metrics[j]) - float(old_metrics[j])) / (new_base_counter - old_base_counter))
+				self.cs.gauge("%s.%s.%s.%s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter, labels[j]), lab_result)
+				j += 1
+		    elif ((counter_info['properties'] == "rate") or (counter_info['properties'] == "rate,no-zero-values")):
+			if (counter_info['type'] != 'array'):
+			    rte_new_metric    = float(new_data[inst][counter])
+			    rte_old_metric    = float(old_data[inst][counter])
+			    rte_new_timestamp = float(new_data[inst]['timestamp'])
+			    rte_old_timestamp = float(old_data[inst]['timestamp'])
+			    rte_result        = ((rte_new_metric - rte_old_metric) / (rte_new_timestamp - rte_old_timestamp))
+			    self.cs.gauge("%s.%s.%s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter), rte_result)
+			    #print "%s.%s.%s = %s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter, rte_result) 
+			else:
+			    #not implemented yet
+			    pass
+		    elif (counter_info['properties'] == "average"):
+			if (counter_info['type'] != 'array'):
+			    per_new_metric    = float(new_data[inst][counter])
+			    per_old_metric    = float(old_data[inst][counter])
+			    per_new_base_c    = float(new_data[inst][counter_info['base-counter']])
+			    per_old_base_c    = float(old_data[inst][counter_info['base-counter']])
+			    try:
+				per_result        = (per_new_metric - per_old_metric) / (per_new_base_c - per_old_base_c)
+			    except ZeroDivisionError:
+				per_result = 0
+			    self.cs.gauge("%s.%s.%s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter), per_result)
+			    #print "%s.%s.%s = %s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter, per_result)
+		    else:
+			print "not logging counter: %s" % counter_info['properties']
+	return new_data
     def get_cpu_counters(self, old_data, counter_req_list=None):
 	## Accepts:
 	##  - old_data (dict of old counter values)
@@ -44,6 +145,7 @@ class MyDaemon(Daemon):
 	api.child_add_string("max-records",4294967295)
 	api.child_add_string("objectname",object_name)
 	xo = self.cdot_api_obj.s.invoke_elem(api)
+	self.cs.incr("api.invoke")
 	new_data = {}
 	## For each instance returned...
 	for res in xmltodict.parse(xo.sprintf())['results']['attributes-list']['instance-info']:
@@ -67,15 +169,15 @@ class MyDaemon(Daemon):
 			    per_result        = 100 * ((per_new_metric - per_old_metric) / (per_new_base_c - per_old_base_c))
 			    self.cs.gauge("%s.%s.%s" % (self.cdot_api_obj.CLUSTER_NAME, new_data[inst]['name'], counter), per_result)
 			else:
-			    new_metrics = string.split(new_data[inst][counter],",")
-			    old_metrics = string.split(old_data[inst][counter],",")
-			    new_num_metrics = len(new_metrics)
-			    old_num_metrics = len(old_metrics)
-			    base_counter = counter_info['base-counter']
+			    new_metrics      = string.split(new_data[inst][counter],",")
+			    old_metrics      = string.split(old_data[inst][counter],",")
+			    new_num_metrics  = len(new_metrics)
+			    old_num_metrics  = len(old_metrics)
+			    base_counter     = counter_info['base-counter']
 			    new_base_counter = float(new_data[inst][base_counter])
 			    old_base_counter = float(old_data[inst][base_counter])
-			    labels = string.split(counter_info['labels'],",")
-			    num_labels = len(labels)
+			    labels           = string.split(counter_info['labels'],",")
+			    num_labels       = len(labels)
 			    j = 0
 			    while (j < num_labels):
 				lab_result = 100*((float(new_metrics[j]) - float(old_metrics[j])) / (new_base_counter - old_base_counter))
@@ -108,15 +210,20 @@ class MyDaemon(Daemon):
 	old = []
 	new = []
 	## new_data / old data are the dicts of data
-	old_cpu_perf_data = {}
-	new_cpu_perf_data = {}
-	new_data = {}
+	old_cpu_perf_data      = {}
+	new_cpu_perf_data      = {}
+	new_data               = {}
 	new_data['timestamps'] = {}
-	old_data = {}
+	old_data               = {}
+	old_raid_group_perf_data = {}
+	new_raid_group_perf_data = {}
 	while True:
-	    ## Collect and log CPI data
+	    ## Collect and log CPU data
 	    old_cpu_perf_data = new_cpu_perf_data
 	    new_cpu_perf_data = self.get_cpu_counters(old_cpu_perf_data)
+	    ## Collect and log raid group data
+	    old_raid_group_perf_data = new_raid_group_perf_data
+	    new_raid_group_perf_data = self.get_raid_group_counters(old_raid_group_perf_data)
 	    ## Iterate over existing volumes for given set of counters
 	    new = self.cdot_api_obj.get_volumes()
 	    if (len(old) != 0):
@@ -146,12 +253,12 @@ class MyDaemon(Daemon):
 			try:
 			    try:
 				self.cdot_api_obj.tellme("Processing metric %s" % metric)
-				m_fields  = string.split(metric, '.')
-				m_cluster = m_fields[0]
-				m_svm     = m_fields[1]
-				m_vol     = m_fields[2]
-				m_ctr     = m_fields[3]
-				m_ctr_info = self.cdot_api_obj.vol_ctr_info[m_cluster][m_svm][m_vol][m_ctr]
+				m_fields       = string.split(metric, '.')
+				m_cluster      = m_fields[0]
+				m_svm          = m_fields[1]
+				m_vol          = m_fields[2]
+				m_ctr          = m_fields[3]
+				m_ctr_info     = self.cdot_api_obj.vol_ctr_info[m_cluster][m_svm][m_vol][m_ctr]
 				m_base_counter = m_ctr_info['base-counter']  # if this exists we need to process counter more carefully
 				m_properties   = m_ctr_info['properties']    # raw, rate, average, delta, percentage
 				m_units        = m_ctr_info['unit']          # seconds, microseconds, bytes, etc
